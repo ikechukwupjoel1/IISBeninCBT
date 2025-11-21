@@ -286,19 +286,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // --- Helper for Print ---
   const printCredentials = () => {
       const content = `
-        <div style="text-align: center; font-family: sans-serif; padding: 20px; border: 2px solid #ccc;">
-            <h2>IISBenin CBT Login Details</h2>
-            <p><strong>Name:</strong> ${credentialsPopup?.name}</p>
-            <p><strong>Login ID:</strong> ${credentialsPopup?.id}</p>
-            <p><strong>PIN Code:</strong> ${credentialsPopup?.pin}</p>
-            <hr/>
-            <p style="font-size: 12px;">Please keep this safe. Do not share.</p>
-        </div>
+        <html>
+        <head>
+            <title>IISBenin CBT - Login Credentials</title>
+            <style>
+                body { text-align: center; font-family: sans-serif; padding: 20px; }
+                .card { border: 2px solid #ccc; padding: 30px; border-radius: 12px; max-width: 400px; margin: 0 auto; }
+                h2 { color: #1e3655; margin-bottom: 10px; }
+                p { margin: 10px 0; }
+                .pin { font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 20px 0; display: block; background: #f0f0f0; padding: 10px; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <h2>IISBenin CBT</h2>
+                <p><strong>User:</strong> ${credentialsPopup?.name}</p>
+                <p><strong>Login ID:</strong> ${credentialsPopup?.id}</p>
+                <span class="pin">${credentialsPopup?.pin}</span>
+                <hr style="margin: 20px 0; border: 0; border-top: 1px dashed #ccc;"/>
+                <p style="font-size: 12px; color: #666;">Keep these credentials secure.</p>
+            </div>
+            <script>
+                window.onload = function() {
+                    window.print();
+                }
+            </script>
+        </body>
+        </html>
       `;
-      const win = window.open('', '', 'height=400,width=400');
-      win?.document.write(content);
-      win?.print();
-      win?.close();
+      const win = window.open('', '_blank', 'height=600,width=500');
+      if (win) {
+          win.document.write(content);
+          win.document.close(); // Finish writing to render content
+      }
   };
 
   return (
