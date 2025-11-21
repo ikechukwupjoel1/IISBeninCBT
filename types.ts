@@ -26,6 +26,9 @@ export interface User {
   role: UserRole;
   avatar?: string;
   grade?: string;
+  email?: string;    // For teachers
+  phone?: string;    // For teachers
+  subject?: string;  // For teachers
 }
 
 export interface Question {

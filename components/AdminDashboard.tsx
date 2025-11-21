@@ -55,7 +55,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   });
 
   // User Management State
+  const [userSubTab, setUserSubTab] = useState<'students' | 'staff'>('students');
   const [showUserModal, setShowUserModal] = useState(false);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkText, setBulkText] = useState('');
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({
     name: '',
     role: UserRole.STUDENT,
@@ -65,6 +69,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     phone: '',
     subject: ''
   });
+  const [credentialsPopup, setCredentialsPopup] = useState<{name: string, id: string, pin: string} | null>(null);
 
   // Settings State
   const [newHallName, setNewHallName] = useState('');
@@ -73,6 +78,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [assignStaffId, setAssignStaffId] = useState('');
   const [assignHall, setAssignHall] = useState('');
 
+  // --- Schedule Logic ---
   const handleEditClick = (exam: Exam) => {
     setEditingExam(exam);
     setFormData({
@@ -125,7 +131,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setShowScheduleModal(false);
   };
 
-  // Logo Upload Logic
+  // --- Logo Logic ---
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -137,33 +143,119 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // User Management Logic
-  const handleAddUser = () => {
-    if (!newUser.name) return;
-    
-    const generatedPin = Math.floor(10000 + Math.random() * 90000).toString();
-    const userToAdd: User = {
-      id: `new-u-${Date.now()}`,
-      name: newUser.name,
-      role: newUser.role,
-      regNumber: newUser.role === UserRole.STUDENT ? newUser.regNumber : undefined,
-      pin: generatedPin,
-      avatar: `https://ui-avatars.com/api/?name=${newUser.name.replace(' ', '+')}&background=random&color=fff`,
-      grade: newUser.role === UserRole.STUDENT ? newUser.grade : undefined,
-      // Staff fields (optional on User type but good to store if we extend)
-    };
-    
-    onUpdateUsers(prev => [...prev, userToAdd]);
-    setShowUserModal(false);
-    
-    // Reset form
-    setNewUser({ name: '', role: UserRole.STUDENT, grade: '', regNumber: '', email: '', phone: '', subject: '' });
-    
-    // Show credentials
-    const loginId = userToAdd.role === UserRole.STUDENT ? userToAdd.regNumber : 'Use Email/ID';
-    alert(`User Created Successfully!\n\nName: ${userToAdd.name}\nRole: ${userToAdd.role}\nLogin ID: ${loginId}\nPIN: ${generatedPin}\n\nPlease copy these credentials.`);
+  // --- User Management Logic ---
+  const openAddUserModal = () => {
+      setEditingUser(null);
+      setNewUser({ name: '', role: userSubTab === 'students' ? UserRole.STUDENT : UserRole.TEACHER, grade: '', regNumber: '', email: '', phone: '', subject: '' });
+      setShowUserModal(true);
   };
 
+  const openEditUserModal = (user: User) => {
+      setEditingUser(user);
+      setNewUser({
+          name: user.name,
+          role: user.role,
+          grade: user.grade || '',
+          regNumber: user.regNumber || '',
+          email: user.email || '',
+          phone: user.phone || '',
+          subject: user.subject || ''
+      });
+      setShowUserModal(true);
+  };
+
+  const handleDeleteUser = (id: string) => {
+      if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+          onUpdateUsers(prev => prev.filter(u => u.id !== id));
+      }
+  };
+
+  const handleSaveUser = () => {
+    if (!newUser.name) return;
+    
+    if (editingUser) {
+        // Edit Existing User
+        onUpdateUsers(prev => prev.map(u => u.id === editingUser.id ? {
+            ...u,
+            name: newUser.name,
+            role: newUser.role,
+            regNumber: newUser.role === UserRole.STUDENT ? newUser.regNumber : undefined,
+            grade: newUser.role === UserRole.STUDENT ? newUser.grade : undefined,
+            email: newUser.role === UserRole.TEACHER ? newUser.email : undefined,
+            phone: newUser.role === UserRole.TEACHER ? newUser.phone : undefined,
+            subject: newUser.role === UserRole.TEACHER ? newUser.subject : undefined,
+        } : u));
+        setShowUserModal(false);
+    } else {
+        // Create New User
+        const generatedPin = Math.floor(10000 + Math.random() * 90000).toString();
+        const userToAdd: User = {
+            id: `new-u-${Date.now()}`,
+            name: newUser.name,
+            role: newUser.role,
+            regNumber: newUser.role === UserRole.STUDENT ? newUser.regNumber : undefined,
+            pin: generatedPin,
+            avatar: `https://ui-avatars.com/api/?name=${newUser.name.replace(' ', '+')}&background=random&color=fff`,
+            grade: newUser.role === UserRole.STUDENT ? newUser.grade : undefined,
+            email: newUser.role === UserRole.TEACHER ? newUser.email : undefined,
+            phone: newUser.role === UserRole.TEACHER ? newUser.phone : undefined,
+            subject: newUser.role === UserRole.TEACHER ? newUser.subject : undefined,
+        };
+        
+        onUpdateUsers(prev => [...prev, userToAdd]);
+        setShowUserModal(false);
+        
+        // Show credentials popup
+        const loginId = userToAdd.role === UserRole.STUDENT ? userToAdd.regNumber : userToAdd.email;
+        setCredentialsPopup({
+            name: userToAdd.name,
+            id: loginId || 'N/A',
+            pin: generatedPin
+        });
+    }
+  };
+
+  const handleBulkImport = () => {
+      const lines = bulkText.split('\n');
+      const newUsers: User[] = [];
+      
+      lines.forEach((line, idx) => {
+          // CSV Format: Name, Role (Student/Staff), ID/Email, Class/Subject
+          const parts = line.split(',').map(p => p.trim());
+          if (parts.length >= 3) {
+              const name = parts[0];
+              const roleStr = parts[1].toLowerCase();
+              const idOrEmail = parts[2];
+              const extra = parts[3] || '';
+              
+              const isStudent = roleStr.includes('student');
+              const pin = Math.floor(10000 + Math.random() * 90000).toString();
+              
+              newUsers.push({
+                  id: `bulk-u-${Date.now()}-${idx}`,
+                  name,
+                  role: isStudent ? UserRole.STUDENT : UserRole.TEACHER,
+                  pin,
+                  avatar: `https://ui-avatars.com/api/?name=${name.replace(' ', '+')}&background=random&color=fff`,
+                  regNumber: isStudent ? idOrEmail : undefined,
+                  email: !isStudent ? idOrEmail : undefined,
+                  grade: isStudent ? extra : undefined,
+                  subject: !isStudent ? extra : undefined
+              });
+          }
+      });
+
+      if (newUsers.length > 0) {
+          onUpdateUsers(prev => [...prev, ...newUsers]);
+          setBulkText('');
+          setShowBulkModal(false);
+          alert(`Successfully imported ${newUsers.length} users.`);
+      } else {
+          alert('Invalid format. Please use: Name, Role, ID/Email, Class/Subject');
+      }
+  };
+
+  // --- Hall & Invigilator Logic ---
   const handleAddHall = () => {
     if (newHallName && !halls.includes(newHallName)) {
       onUpdateHalls(prev => [...prev, newHallName]);
@@ -189,6 +281,24 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     onUpdateInvigilators(prev => [...prev, newAssignment]);
     setAssignStaffId('');
     setAssignHall('');
+  };
+
+  // --- Helper for Print ---
+  const printCredentials = () => {
+      const content = `
+        <div style="text-align: center; font-family: sans-serif; padding: 20px; border: 2px solid #ccc;">
+            <h2>IISBenin CBT Login Details</h2>
+            <p><strong>Name:</strong> ${credentialsPopup?.name}</p>
+            <p><strong>Login ID:</strong> ${credentialsPopup?.id}</p>
+            <p><strong>PIN Code:</strong> ${credentialsPopup?.pin}</p>
+            <hr/>
+            <p style="font-size: 12px;">Please keep this safe. Do not share.</p>
+        </div>
+      `;
+      const win = window.open('', '', 'height=400,width=400');
+      win?.document.write(content);
+      win?.print();
+      win?.close();
   };
 
   return (
@@ -443,37 +553,95 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'users' && (
           <div className="space-y-6 animate-in fade-in duration-500">
              <div className="flex justify-between items-center">
-                <p className="text-slate-500">Manage Student and Staff accounts.</p>
-                <Button onClick={() => setShowUserModal(true)}>
-                    <Icons.Plus className="w-4 h-4 mr-2" /> Add User
-                </Button>
+                <div className="flex gap-4">
+                   <button 
+                     onClick={() => setUserSubTab('students')}
+                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${userSubTab === 'students' ? 'bg-brand-100 text-brand-800' : 'text-slate-500 hover:bg-slate-50'}`}
+                   >
+                     Student List
+                   </button>
+                   <button 
+                     onClick={() => setUserSubTab('staff')}
+                     className={`px-4 py-2 rounded-lg font-bold text-sm transition-colors ${userSubTab === 'staff' ? 'bg-brand-100 text-brand-800' : 'text-slate-500 hover:bg-slate-50'}`}
+                   >
+                     Staff List
+                   </button>
+                </div>
+                <div className="flex gap-3">
+                    <Button variant="secondary" onClick={() => setShowBulkModal(true)}>Bulk Import</Button>
+                    <Button onClick={openAddUserModal}>
+                        <Icons.Plus className="w-4 h-4 mr-2" /> Add User
+                    </Button>
+                </div>
              </div>
              
              <Card className="overflow-hidden border-0">
                 <div className="max-h-[500px] overflow-y-auto">
                   <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-100 shadow-sm">
+                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-100 shadow-sm z-10">
                       <tr>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Name</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">ID / Reg No</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Class</th>
-                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">PIN (Auto)</th>
+                        {userSubTab === 'students' ? (
+                            <>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Admission No</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Class</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">PIN</th>
+                            </>
+                        ) : (
+                            <>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Email</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Phone</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Subject</th>
+                            </>
+                        )}
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
-                      {users.filter(u => u.role !== UserRole.ADMIN).map((user) => (
+                      {users.filter(u => userSubTab === 'students' ? u.role === UserRole.STUDENT : u.role === UserRole.TEACHER).map((user) => (
                         <tr key={user.id} className="hover:bg-slate-50">
                           <td className="px-6 py-4 font-medium text-slate-900 flex items-center gap-3">
-                             <img src={user.avatar} className="w-6 h-6 rounded-full" alt="" />
+                             <img src={user.avatar} className="w-8 h-8 rounded-full" alt="" />
                              {user.name}
                           </td>
-                          <td className="px-6 py-4"><Badge color={user.role === UserRole.TEACHER ? 'blue' : 'gray'}>{user.role}</Badge></td>
-                          <td className="px-6 py-4 text-slate-600 font-mono text-xs">{user.regNumber || '-'}</td>
-                          <td className="px-6 py-4 text-slate-600 font-mono text-xs">{user.grade || '-'}</td>
-                          <td className="px-6 py-4 text-slate-600 font-mono text-xs tracking-widest">{user.pin || '****'}</td>
+                          {userSubTab === 'students' ? (
+                              <>
+                                <td className="px-6 py-4 text-slate-600 font-mono text-xs">{user.regNumber || '-'}</td>
+                                <td className="px-6 py-4 text-slate-600"><Badge color="blue">{user.grade}</Badge></td>
+                                <td className="px-6 py-4 text-slate-600 font-mono text-xs tracking-widest">{user.pin || '****'}</td>
+                              </>
+                          ) : (
+                              <>
+                                <td className="px-6 py-4 text-slate-600 text-xs">{user.email || '-'}</td>
+                                <td className="px-6 py-4 text-slate-600 text-xs">{user.phone || '-'}</td>
+                                <td className="px-6 py-4 text-slate-600 text-xs font-bold">{user.subject || '-'}</td>
+                              </>
+                          )}
+                          <td className="px-6 py-4 text-right">
+                              <div className="flex items-center justify-end gap-2">
+                                  <button 
+                                    onClick={() => openEditUserModal(user)}
+                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded" 
+                                    title="Edit"
+                                  >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDeleteUser(user.id)}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                                    title="Delete"
+                                  >
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                              </div>
+                          </td>
                         </tr>
                       ))}
+                      {users.filter(u => userSubTab === 'students' ? u.role === UserRole.STUDENT : u.role === UserRole.TEACHER).length === 0 && (
+                          <tr>
+                              <td colSpan={5} className="px-6 py-8 text-center text-slate-400 text-sm italic">No records found in this category.</td>
+                          </tr>
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -589,7 +757,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {showUserModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
             <Card className="w-full max-w-md p-6 animate-in zoom-in duration-200">
-                <h3 className="text-xl font-bold text-brand-900 mb-4">Add New User</h3>
+                <h3 className="text-xl font-bold text-brand-900 mb-4">{editingUser ? 'Edit User' : 'Add New User'}</h3>
                 <div className="space-y-4">
                     <div>
                         <Label>Full Name</Label>
@@ -601,6 +769,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className="w-full rounded-lg border-slate-300 bg-white text-slate-900 sm:text-sm py-3 px-4 border"
                             value={newUser.role}
                             onChange={(e: any) => setNewUser({...newUser, role: e.target.value})}
+                            disabled={!!editingUser} // Prevent role change on edit to keep logic simple
                         >
                             <option value={UserRole.STUDENT}>Student</option>
                             <option value={UserRole.TEACHER}>Staff / Teacher</option>
@@ -648,16 +817,71 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </>
                     )}
 
-                    <div className="bg-blue-50 p-3 rounded text-xs text-blue-700">
-                        A secure PIN password will be automatically generated for this user upon creation.
-                    </div>
+                    {!editingUser && (
+                        <div className="bg-blue-50 p-3 rounded text-xs text-blue-700">
+                            A secure PIN password will be automatically generated for this user upon creation.
+                        </div>
+                    )}
                 </div>
                 <div className="mt-6 flex justify-end gap-3">
                     <Button variant="secondary" onClick={() => setShowUserModal(false)}>Cancel</Button>
-                    <Button onClick={handleAddUser}>Create User</Button>
+                    <Button onClick={handleSaveUser}>{editingUser ? 'Save Changes' : 'Create User'}</Button>
                 </div>
             </Card>
         </div>
+      )}
+
+      {/* Bulk Modal */}
+      {showBulkModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+             <Card className="w-full max-w-2xl p-6 animate-in zoom-in duration-200">
+                <h3 className="font-bold text-lg mb-2">Bulk Import Users</h3>
+                <p className="text-sm text-slate-500 mb-4">Format: <span className="font-mono bg-slate-100 px-1 rounded">Name, Role (Student/Staff), ID/Email, Class/Subject</span></p>
+                <textarea 
+                    className="w-full h-64 p-4 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 outline-none"
+                    placeholder={`John Doe, Student, IIS-2024-001, Grade 10\nJane Smith, Staff, jane@school.com, Physics`}
+                    value={bulkText}
+                    onChange={(e) => setBulkText(e.target.value)}
+                />
+                <div className="mt-6 flex justify-end gap-3">
+                    <Button variant="secondary" onClick={() => setShowBulkModal(false)}>Cancel</Button>
+                    <Button onClick={handleBulkImport}>Import Users</Button>
+                </div>
+             </Card>
+          </div>
+      )}
+
+      {/* Credentials Popup */}
+      {credentialsPopup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+              <Card className="w-full max-w-sm p-8 text-center animate-in zoom-in duration-300 border-t-4 border-green-500">
+                  <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Icons.CheckCircle className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-800 mb-2">User Enrolled!</h3>
+                  <p className="text-sm text-slate-500 mb-6">Credentials have been generated successfully.</p>
+                  
+                  <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-left space-y-2 mb-6">
+                      <div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">Name</span>
+                          <p className="font-bold text-slate-800">{credentialsPopup.name}</p>
+                      </div>
+                      <div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">Login ID</span>
+                          <p className="font-mono text-brand-600">{credentialsPopup.id}</p>
+                      </div>
+                      <div>
+                          <span className="text-xs font-bold text-slate-400 uppercase">Access PIN</span>
+                          <p className="font-mono text-brand-600 text-xl tracking-widest">{credentialsPopup.pin}</p>
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                      <Button variant="secondary" onClick={() => setCredentialsPopup(null)}>Close</Button>
+                      <Button onClick={printCredentials}>Print Slip</Button>
+                  </div>
+              </Card>
+          </div>
       )}
     </div>
   );
