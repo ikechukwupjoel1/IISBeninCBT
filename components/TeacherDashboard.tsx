@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button, Card, Input, Label, Badge } from './ui/UI';
 import { Icons } from './ui/Icons';
@@ -14,6 +15,11 @@ interface TeacherDashboardProps {
   globalLogo: string;
 }
 
+const SCHOOL_CLASSES = [
+  'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 
+  'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'
+];
+
 const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherName, exams, onAddExam, results, globalLogo }) => {
   const [activeTab, setActiveTab] = useState<'create' | 'bank' | 'results'>('create');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -22,6 +28,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
   // Create Exam Form
   const [subject, setSubject] = useState('');
   const [title, setTitle] = useState('');
+  const [assignedClass, setAssignedClass] = useState('');
   const [aiTopic, setAiTopic] = useState('');
   
   // Bulk Upload State
@@ -102,8 +109,8 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
   };
 
   const handlePublishExam = () => {
-      if (!title || !subject || generatedQuestions.length === 0) {
-          alert("Please fill in title, subject and add at least one question.");
+      if (!title || !subject || !assignedClass || generatedQuestions.length === 0) {
+          alert("Please fill in title, subject, target class and add at least one question.");
           return;
       }
 
@@ -115,7 +122,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
           totalQuestions: generatedQuestions.length,
           questions: generatedQuestions,
           status: ExamStatus.ACTIVE,
-          assignedClass: 'General'
+          assignedClass: assignedClass
       };
 
       onAddExam(newExam);
@@ -124,6 +131,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
       // Reset
       setTitle('');
       setSubject('');
+      setAssignedClass('');
       setAiTopic('');
       setGeneratedQuestions([]);
   };
@@ -179,7 +187,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                 <p className="text-slate-500 mb-8">Create a new Computer Based Test using AI assistance or manual upload.</p>
 
                 <Card className="p-8 border-0 shadow-soft bg-white">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                         <div>
                             <Label>Subject</Label>
                             <Input 
@@ -195,6 +203,19 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                                 value={title}
                                 onChange={(e:any) => setTitle(e.target.value)}
                             />
+                        </div>
+                         <div>
+                            <Label>Target Class</Label>
+                             <select 
+                                className="w-full rounded-lg border-slate-300 bg-white text-slate-900 sm:text-sm py-3 px-4 border mt-1"
+                                value={assignedClass}
+                                onChange={(e) => setAssignedClass(e.target.value)}
+                            >
+                                <option value="">Select Class...</option>
+                                {SCHOOL_CLASSES.map(cls => (
+                                    <option key={cls} value={cls}>{cls}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 

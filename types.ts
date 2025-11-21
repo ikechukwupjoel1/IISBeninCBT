@@ -1,3 +1,4 @@
+
 export enum UserRole {
   STUDENT = 'STUDENT',
   TEACHER = 'TEACHER',
@@ -49,6 +50,7 @@ export interface Exam {
   endTime?: Date;
   assignedClass: string;
   date?: string;
+  time?: string;
 }
 
 export interface ExamResult {
@@ -59,6 +61,14 @@ export interface ExamResult {
   totalScore: number;
   answers: Record<string, string | boolean>; // questionId -> answer
   submittedAt: Date;
+}
+
+export interface InvigilatorAssignment {
+  id: string;
+  staffId: string;
+  staffName: string;
+  hallName: string;
+  status: 'Active' | 'Inactive';
 }
 
 // For AI Generation

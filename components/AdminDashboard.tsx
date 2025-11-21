@@ -1,10 +1,11 @@
+
 import React, { useState, useRef } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { MOCK_STATS } from '../utils/mockData';
 import { Button, Card, Input, Badge, Label } from './ui/UI';
 import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
-import { Exam, ExamStatus, User, UserRole } from '../types';
+import { Exam, ExamStatus, User, UserRole, InvigilatorAssignment } from '../types';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -16,7 +17,14 @@ interface AdminDashboardProps {
   onUpdateUsers: React.Dispatch<React.SetStateAction<User[]>>;
   halls: string[];
   onUpdateHalls: React.Dispatch<React.SetStateAction<string[]>>;
+  invigilators: InvigilatorAssignment[];
+  onUpdateInvigilators: React.Dispatch<React.SetStateAction<InvigilatorAssignment[]>>;
 }
+
+const SCHOOL_CLASSES = [
+  'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 
+  'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'
+];
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
   onLogout, 
@@ -27,7 +35,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   users,
   onUpdateUsers,
   halls,
-  onUpdateHalls
+  onUpdateHalls,
+  invigilators,
+  onUpdateInvigilators
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invigilators' | 'users' | 'settings'>('overview');
   
@@ -40,7 +50,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     assignedClass: '',
     duration: 30,
     status: 'SCHEDULED',
-    date: ''
+    date: '',
+    time: ''
   });
 
   // User Management State
@@ -49,11 +60,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     name: '',
     role: UserRole.STUDENT,
     grade: '',
-    regNumber: ''
+    regNumber: '',
+    email: '',
+    phone: '',
+    subject: ''
   });
 
   // Settings State
   const [newHallName, setNewHallName] = useState('');
+  
+  // Invigilator Assignment State
+  const [assignStaffId, setAssignStaffId] = useState('');
+  const [assignHall, setAssignHall] = useState('');
 
   const handleEditClick = (exam: Exam) => {
     setEditingExam(exam);
@@ -63,14 +81,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         assignedClass: exam.assignedClass,
         duration: exam.durationMinutes,
         status: exam.status,
-        date: exam.date || ''
+        date: exam.date || '',
+        time: exam.time || ''
     });
     setShowScheduleModal(true);
   };
 
   const handleAddNewClick = () => {
     setEditingExam(null);
-    setFormData({ title: '', subject: '', assignedClass: '', duration: 30, status: 'SCHEDULED', date: '' });
+    setFormData({ title: '', subject: '', assignedClass: '', duration: 30, status: 'SCHEDULED', date: '', time: '' });
     setShowScheduleModal(true);
   };
 
@@ -84,7 +103,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             assignedClass: formData.assignedClass,
             durationMinutes: formData.duration,
             status: formData.status as ExamStatus,
-            date: formData.date
+            date: formData.date,
+            time: formData.time
         } : e));
     } else {
         // Create new placeholder exam
@@ -97,7 +117,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             status: formData.status as ExamStatus,
             totalQuestions: 0,
             questions: [],
-            date: formData.date
+            date: formData.date,
+            time: formData.time
         };
         onUpdateExams(prev => [...prev, newExam]);
     }
@@ -127,20 +148,47 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       role: newUser.role,
       regNumber: newUser.role === UserRole.STUDENT ? newUser.regNumber : undefined,
       pin: generatedPin,
-      avatar: `https://ui-avatars.com/api/?name=${newUser.name.replace(' ', '+')}&background=random&color=fff`
+      avatar: `https://ui-avatars.com/api/?name=${newUser.name.replace(' ', '+')}&background=random&color=fff`,
+      grade: newUser.role === UserRole.STUDENT ? newUser.grade : undefined,
+      // Staff fields (optional on User type but good to store if we extend)
     };
     
     onUpdateUsers(prev => [...prev, userToAdd]);
     setShowUserModal(false);
-    setNewUser({ name: '', role: UserRole.STUDENT, grade: '', regNumber: '' });
-    alert(`User Created!\nName: ${userToAdd.name}\nPIN: ${generatedPin}\nRegNo: ${userToAdd.regNumber || 'N/A'}`);
+    
+    // Reset form
+    setNewUser({ name: '', role: UserRole.STUDENT, grade: '', regNumber: '', email: '', phone: '', subject: '' });
+    
+    // Show credentials
+    const loginId = userToAdd.role === UserRole.STUDENT ? userToAdd.regNumber : 'Use Email/ID';
+    alert(`User Created Successfully!\n\nName: ${userToAdd.name}\nRole: ${userToAdd.role}\nLogin ID: ${loginId}\nPIN: ${generatedPin}\n\nPlease copy these credentials.`);
   };
 
   const handleAddHall = () => {
     if (newHallName && !halls.includes(newHallName)) {
       onUpdateHalls(prev => [...prev, newHallName]);
       setNewHallName('');
+      alert('New Hall Added');
     }
+  };
+
+  const handleAssignInvigilator = () => {
+    if(!assignStaffId || !assignHall) return;
+
+    const staffMember = users.find(u => u.id === assignStaffId);
+    if(!staffMember) return;
+
+    const newAssignment: InvigilatorAssignment = {
+      id: `inv-${Date.now()}`,
+      staffId: assignStaffId,
+      staffName: staffMember.name,
+      hallName: assignHall,
+      status: 'Active'
+    };
+    
+    onUpdateInvigilators(prev => [...prev, newAssignment]);
+    setAssignStaffId('');
+    setAssignHall('');
   };
 
   return (
@@ -281,6 +329,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <thead>
                     <tr className="bg-slate-50 border-b border-slate-100">
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Date</th>
+                      <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Time</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Exam</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Class</th>
                       <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Duration</th>
@@ -292,8 +341,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     {exams.map((exam) => (
                       <tr key={exam.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-4 text-slate-600">{exam.date || 'Unscheduled'}</td>
+                        <td className="px-6 py-4 text-slate-600 font-mono text-sm">{exam.time || '--:--'}</td>
                         <td className="px-6 py-4 font-medium text-slate-900">{exam.title}</td>
-                        <td className="px-6 py-4 text-slate-600">{exam.assignedClass}</td>
+                        <td className="px-6 py-4 text-slate-600"><Badge color="blue">{exam.assignedClass}</Badge></td>
                         <td className="px-6 py-4 text-slate-600">{exam.durationMinutes} mins</td>
                         <td className="px-6 py-4"><Badge color={exam.status === 'ACTIVE' ? 'green' : 'gray'}>{exam.status}</Badge></td>
                         <td className="px-6 py-4">
@@ -315,46 +365,76 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {activeTab === 'invigilators' && (
           <div className="space-y-6 animate-in fade-in duration-500">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               <div className="bg-white p-6 rounded-2xl shadow-soft h-fit">
-                 <h3 className="font-bold text-slate-800 mb-4">Assign Invigilator</h3>
-                 <div className="space-y-4">
-                   <div>
-                     <Label>Staff Member</Label>
-                     <select className="w-full rounded-lg border-slate-300 bg-white text-slate-900 focus:border-brand-600 focus:ring-brand-600 sm:text-sm py-3 px-4 border">
-                        <option value="">Select Staff...</option>
-                        {users.filter(u => u.role === UserRole.TEACHER).map(u => (
-                            <option key={u.id} value={u.id}>{u.name}</option>
-                        ))}
-                     </select>
-                   </div>
-                   <div>
-                     <Label>Exam Hall</Label>
-                     <select className="w-full rounded-lg border-slate-300 bg-white text-slate-900 focus:border-brand-600 focus:ring-brand-600 sm:text-sm py-3 px-4 border">
-                       <option value="">Select Hall...</option>
-                       {halls.map(h => (
-                         <option key={h} value={h}>{h}</option>
-                       ))}
-                     </select>
-                   </div>
-                   <Button className="w-full">Assign Duty</Button>
-                 </div>
+               <div className="space-y-6">
+                   <Card className="p-6 rounded-2xl shadow-soft bg-white">
+                     <h3 className="font-bold text-slate-800 mb-4">Assign Invigilator</h3>
+                     <div className="space-y-4">
+                       <div>
+                         <Label>Staff Member</Label>
+                         <select 
+                            className="w-full rounded-lg border-slate-300 bg-white text-slate-900 focus:border-brand-600 focus:ring-brand-600 sm:text-sm py-3 px-4 border"
+                            value={assignStaffId}
+                            onChange={(e) => setAssignStaffId(e.target.value)}
+                         >
+                            <option value="">Select Staff...</option>
+                            {users.filter(u => u.role === UserRole.TEACHER).map(u => (
+                                <option key={u.id} value={u.id}>{u.name}</option>
+                            ))}
+                         </select>
+                       </div>
+                       <div>
+                         <Label>Exam Hall</Label>
+                         <select 
+                            className="w-full rounded-lg border-slate-300 bg-white text-slate-900 focus:border-brand-600 focus:ring-brand-600 sm:text-sm py-3 px-4 border"
+                            value={assignHall}
+                            onChange={(e) => setAssignHall(e.target.value)}
+                         >
+                           <option value="">Select Hall...</option>
+                           {halls.map(h => (
+                             <option key={h} value={h}>{h}</option>
+                           ))}
+                         </select>
+                       </div>
+                       <Button className="w-full" onClick={handleAssignInvigilator}>Assign Duty</Button>
+                     </div>
+                   </Card>
+
+                   <Card className="p-6 rounded-2xl shadow-soft bg-brand-50 border border-brand-100">
+                     <h3 className="font-bold text-brand-900 mb-4 flex items-center gap-2">
+                       <Icons.Plus className="w-4 h-4" /> Add New Hall
+                     </h3>
+                     <div className="flex gap-2">
+                        <Input 
+                            placeholder="Hall Name (e.g. Room 304)" 
+                            value={newHallName}
+                            onChange={(e:any) => setNewHallName(e.target.value)}
+                            className="bg-white"
+                        />
+                        <Button onClick={handleAddHall} variant="secondary" className="whitespace-nowrap">Add</Button>
+                     </div>
+                   </Card>
                </div>
                
                <div className="space-y-4">
-                 {/* Mock list for display, real implementation would link to state */}
-                 <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><Icons.Users className="w-5 h-5" /></div>
-                      <div>
-                        <p className="font-bold text-slate-800">Mrs. Sarah Johnson</p>
-                        <p className="text-xs text-slate-500">Assigned to: Hall A</p>
-                      </div>
-                    </div>
-                    <Badge color="green">Active</Badge>
-                 </div>
-                 <div className="p-4 text-center text-slate-400 text-sm italic">
-                    Use the form to assign more staff to exam halls.
-                 </div>
+                 <h3 className="font-bold text-slate-800 px-1">Current Assignments</h3>
+                 {invigilators.length === 0 ? (
+                     <div className="p-8 text-center bg-white rounded-xl border border-slate-200 text-slate-400 border-dashed">
+                         No active assignments.
+                     </div>
+                 ) : (
+                     invigilators.map((inv) => (
+                        <div key={inv.id} className="bg-white p-4 rounded-xl border border-slate-100 flex items-center justify-between shadow-sm">
+                            <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500"><Icons.Users className="w-5 h-5" /></div>
+                            <div>
+                                <p className="font-bold text-slate-800">{inv.staffName}</p>
+                                <p className="text-xs text-slate-500">Assigned to: {inv.hallName}</p>
+                            </div>
+                            </div>
+                            <Badge color="green">{inv.status}</Badge>
+                        </div>
+                     ))
+                 )}
                </div>
             </div>
           </div>
@@ -377,6 +457,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Name</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Role</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">ID / Reg No</th>
+                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Class</th>
                         <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">PIN (Auto)</th>
                       </tr>
                     </thead>
@@ -389,6 +470,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </td>
                           <td className="px-6 py-4"><Badge color={user.role === UserRole.TEACHER ? 'blue' : 'gray'}>{user.role}</Badge></td>
                           <td className="px-6 py-4 text-slate-600 font-mono text-xs">{user.regNumber || '-'}</td>
+                          <td className="px-6 py-4 text-slate-600 font-mono text-xs">{user.grade || '-'}</td>
                           <td className="px-6 py-4 text-slate-600 font-mono text-xs tracking-widest">{user.pin || '****'}</td>
                         </tr>
                       ))}
@@ -423,16 +505,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </Card>
 
                 <Card className="p-8 max-w-2xl">
-                    <h3 className="font-bold text-lg text-slate-800 mb-6">Exam Halls</h3>
+                    <h3 className="font-bold text-lg text-slate-800 mb-6">Exam Halls List</h3>
                     <div className="space-y-4">
-                        <div className="flex gap-3">
-                            <Input 
-                                placeholder="Enter new hall name (e.g. Library Wing)" 
-                                value={newHallName}
-                                onChange={(e:any) => setNewHallName(e.target.value)}
-                            />
-                            <Button onClick={handleAddHall}>Add Hall</Button>
-                        </div>
                         <div className="flex flex-wrap gap-2 mt-4">
                             {halls.map(hall => (
                                 <span key={hall} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-full text-sm font-medium border border-slate-200">
@@ -440,6 +514,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 </span>
                             ))}
                         </div>
+                         <p className="text-xs text-slate-400">Tip: Add new halls in the Invigilator tab.</p>
                     </div>
                 </Card>
             </div>
@@ -460,14 +535,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <Label>Subject</Label>
                         <Input value={formData.subject} onChange={(e: any) => setFormData({...formData, subject: e.target.value})} />
                     </div>
-                    <div>
-                        <Label>Date</Label>
-                        <Input type="date" value={formData.date} onChange={(e: any) => setFormData({...formData, date: e.target.value})} />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div>
+                            <Label>Date</Label>
+                            <Input type="date" value={formData.date} onChange={(e: any) => setFormData({...formData, date: e.target.value})} />
+                        </div>
+                        <div>
+                            <Label>Time</Label>
+                            <Input type="time" value={formData.time} onChange={(e: any) => setFormData({...formData, time: e.target.value})} />
+                        </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div>
                             <Label>Class</Label>
-                            <Input value={formData.assignedClass} onChange={(e: any) => setFormData({...formData, assignedClass: e.target.value})} />
+                            <select 
+                                className="w-full rounded-lg border-slate-300 bg-white text-slate-900 sm:text-sm py-3 px-4 border"
+                                value={formData.assignedClass}
+                                onChange={(e) => setFormData({...formData, assignedClass: e.target.value})}
+                            >
+                                <option value="">Select Class...</option>
+                                {SCHOOL_CLASSES.map(cls => (
+                                    <option key={cls} value={cls}>{cls}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                             <Label>Duration (Mins)</Label>
@@ -516,11 +606,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             <option value={UserRole.TEACHER}>Staff / Teacher</option>
                         </select>
                     </div>
+                    
+                    {/* Student Fields */}
                     {newUser.role === UserRole.STUDENT && (
                       <>
                         <div>
                           <Label>Grade / Class</Label>
-                          <Input value={newUser.grade} onChange={(e: any) => setNewUser({...newUser, grade: e.target.value})} placeholder="e.g. SS2" />
+                           <select 
+                                className="w-full rounded-lg border-slate-300 bg-white text-slate-900 sm:text-sm py-3 px-4 border"
+                                value={newUser.grade}
+                                onChange={(e) => setNewUser({...newUser, grade: e.target.value})}
+                            >
+                                <option value="">Select Grade...</option>
+                                {SCHOOL_CLASSES.map(cls => (
+                                    <option key={cls} value={cls}>{cls}</option>
+                                ))}
+                            </select>
                         </div>
                         <div>
                           <Label>Admission Number</Label>
@@ -528,6 +629,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         </div>
                       </>
                     )}
+
+                    {/* Staff Fields */}
+                    {newUser.role === UserRole.TEACHER && (
+                        <>
+                           <div>
+                              <Label>Email Address</Label>
+                              <Input type="email" value={newUser.email} onChange={(e: any) => setNewUser({...newUser, email: e.target.value})} placeholder="name@school.com" />
+                           </div>
+                           <div>
+                              <Label>Phone Number</Label>
+                              <Input type="tel" value={newUser.phone} onChange={(e: any) => setNewUser({...newUser, phone: e.target.value})} placeholder="+229..." />
+                           </div>
+                           <div>
+                              <Label>Subject Specialization</Label>
+                              <Input value={newUser.subject} onChange={(e: any) => setNewUser({...newUser, subject: e.target.value})} placeholder="e.g. Mathematics" />
+                           </div>
+                        </>
+                    )}
+
                     <div className="bg-blue-50 p-3 rounded text-xs text-blue-700">
                         A secure PIN password will be automatically generated for this user upon creation.
                     </div>

@@ -1,3 +1,4 @@
+
 import { Exam, ExamStatus, QuestionType, User, UserRole } from "../types";
 
 export const MOCK_USERS: User[] = [
@@ -13,7 +14,8 @@ export const MOCK_USERS: User[] = [
     regNumber: 'IIS-2024-001',
     pin: '12345',
     role: UserRole.STUDENT,
-    avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=4a7cbd&color=fff'
+    avatar: 'https://ui-avatars.com/api/?name=John+Doe&background=4a7cbd&color=fff',
+    grade: 'Grade 12'
   },
   {
     id: 'u3',
@@ -80,8 +82,9 @@ export const MOCK_EXAMS: Exam[] = [
     durationMinutes: 15,
     totalQuestions: 5,
     status: ExamStatus.ACTIVE,
-    assignedClass: 'SS3',
+    assignedClass: 'Grade 12',
     date: '2024-05-20',
+    time: '09:00',
     questions: [
       {
         id: 'q1',
@@ -130,8 +133,9 @@ export const MOCK_EXAMS: Exam[] = [
     durationMinutes: 30,
     totalQuestions: 0, // Placeholder
     status: ExamStatus.SCHEDULED,
-    assignedClass: 'SS2',
+    assignedClass: 'Grade 11',
     date: '2024-06-15',
+    time: '11:30',
     questions: []
   }
 ];
