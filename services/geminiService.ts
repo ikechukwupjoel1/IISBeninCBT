@@ -40,7 +40,7 @@ export const generateQuestions = async (topic: string, count: number, difficulty
     
     // Map to our internal Question type
     return rawData.map((q: any, index: number) => ({
-      id: `ai-${Date.now()}-${index}`,
+      id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       text: q.text,
       type: QuestionType.MULTIPLE_CHOICE,
       options: q.options,

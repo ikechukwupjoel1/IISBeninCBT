@@ -7,18 +7,21 @@ import React from 'react';
 // 2. Set the variable below to your file path.
 //    Example: const CUSTOM_LOGO_URL = "https://your-school-website.com/logo.png";
 // ----------------------------------------------------------------------
-const CUSTOM_LOGO_URL = ""; 
+const DEFAULT_LOGO_URL = ""; 
 
 interface LogoProps {
   className?: string;
+  src?: string;
 }
 
-export const Logo: React.FC<LogoProps> = ({ className = "w-12 h-12" }) => {
-  // If a custom logo URL is provided, render the image instead of the SVG
-  if (CUSTOM_LOGO_URL) {
+export const Logo: React.FC<LogoProps> = ({ className = "w-12 h-12", src }) => {
+  // Priority: 1. Dynamic src (from Admin upload), 2. Hardcoded Default
+  const logoSrc = src || DEFAULT_LOGO_URL;
+
+  if (logoSrc) {
     return (
       <img 
-        src={CUSTOM_LOGO_URL} 
+        src={logoSrc} 
         alt="School Logo" 
         className={`${className} object-contain`} 
       />

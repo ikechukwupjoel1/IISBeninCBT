@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { MOCK_USERS } from './utils/mockData';
-import { User, UserRole, Exam } from './types';
+import React, { useState, useEffect } from 'react';
+import { MOCK_USERS, MOCK_EXAMS, MOCK_RESULTS } from './utils/mockData';
+import { User, UserRole, Exam, ExamResult } from './types';
 import StudentDashboard from './components/StudentDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import TeacherDashboard from './components/TeacherDashboard';
@@ -12,16 +12,26 @@ import { explainPerformance } from './services/geminiService';
 import { Icons } from './components/ui/Icons';
 
 const App: React.FC = () => {
+  // -- Global State --
   const [currentUser, setCurrentUser] = useState<User | null>(null);
+  
+  // Data State (Lifted up so Admin/Teacher updates reflect for Student)
+  const [exams, setExams] = useState<Exam[]>(MOCK_EXAMS);
+  const [results, setResults] = useState<any[]>(MOCK_RESULTS);
+  const [globalLogo, setGlobalLogo] = useState<string>(''); // Base64 string for logo
+  const [completedAttempts, setCompletedAttempts] = useState<string[]>([]); // List of Exam IDs taken by current session
+
+  // Session State
   const [currentExam, setCurrentExam] = useState<Exam | null>(null);
   const [examResult, setExamResult] = useState<{ score: number, total: number, feedback: string } | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Login State
+  // Login Form State
   const [regNo, setRegNo] = useState('');
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
 
+  // Handle Login
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -35,7 +45,7 @@ const App: React.FC = () => {
       } else if (regNo && pin) {
         setCurrentUser({ 
           ...MOCK_USERS[1], 
-          name: regNo === 'IIS-2024-001' ? 'John Doe' : 'Student User', 
+          name: regNo === 'IIS-2024-001' ? 'John Doe' : `Student ${regNo}`, 
           regNumber: regNo 
         });
       } else {
@@ -45,8 +55,18 @@ const App: React.FC = () => {
     }, 800);
   };
 
+  // Handle Logout
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setCurrentExam(null);
+    setExamResult(null);
+    setRegNo('');
+    setPin('');
+  };
+
+  // Handle Exam Submission
   const handleExamSubmit = async (answers: Record<string, any>) => {
-    if (!currentExam) return;
+    if (!currentExam || !currentUser) return;
     setLoading(true);
     const currentExamSubject = currentExam.subject;
 
@@ -59,13 +79,38 @@ const App: React.FC = () => {
 
     const total = currentExam.questions.reduce((sum, q) => sum + q.points, 0);
     
-    // Get AI Feedback
+    // 1. Get AI Feedback
     const feedback = await explainPerformance(score, total, currentExamSubject);
 
-    // Update State Order: Clear exam first, then show result
+    // 2. Record Result locally
+    const newResult = {
+      id: `r-${Date.now()}`,
+      examTitle: currentExam.title,
+      subject: currentExam.subject,
+      score: score,
+      totalScore: total,
+      grade: calculateGrade(score, total),
+      date: new Date().toISOString().split('T')[0]
+    };
+    setResults(prev => [newResult, ...prev]);
+
+    // 3. Mark as completed for this session
+    setCompletedAttempts(prev => [...prev, currentExam.id]);
+
+    // 4. Update View
     setCurrentExam(null);
     setExamResult({ score, total, feedback });
     setLoading(false);
+  };
+
+  const calculateGrade = (score: number, total: number) => {
+    const percentage = (score / total) * 100;
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B';
+    if (percentage >= 60) return 'C';
+    if (percentage >= 50) return 'D';
+    return 'F';
   };
 
   // -- RENDER VIEWS --
@@ -82,7 +127,7 @@ const App: React.FC = () => {
         <div className="w-full max-w-md relative z-10 px-6 animate-in fade-in zoom-in duration-700">
           <div className="flex flex-col items-center mb-8">
             <div className="p-5 bg-white rounded-full shadow-glow mb-6 ring-8 ring-white/50">
-               <Logo className="w-20 h-20" />
+               <Logo className="w-20 h-20" src={globalLogo} />
             </div>
             <h1 className="text-2xl font-serif font-bold text-brand-900 text-center">Indian International School</h1>
             <p className="text-slate-500 font-medium text-sm uppercase tracking-[0.2em] mt-2">Benin &bull; CBT Platform</p>
@@ -173,14 +218,33 @@ const App: React.FC = () => {
   }
 
   // 3. Roles Routing
+
   if (currentUser.role === UserRole.ADMIN) {
-    return <AdminDashboard onLogout={() => setCurrentUser(null)} />;
+    return (
+      <AdminDashboard 
+        onLogout={handleLogout} 
+        exams={exams}
+        onUpdateExams={setExams}
+        globalLogo={globalLogo}
+        onUpdateLogo={setGlobalLogo}
+      />
+    );
   }
 
   if (currentUser.role === UserRole.TEACHER) {
-    return <TeacherDashboard teacherName={currentUser.name} onLogout={() => setCurrentUser(null)} />;
+    return (
+      <TeacherDashboard 
+        teacherName={currentUser.name} 
+        onLogout={handleLogout}
+        exams={exams}
+        onAddExam={(newExam) => setExams(prev => [...prev, newExam])}
+        results={results}
+        globalLogo={globalLogo}
+      />
+    );
   }
 
+  // Student Views
   if (currentExam) {
     return (
       <ExamSession 
@@ -194,8 +258,12 @@ const App: React.FC = () => {
   return (
     <StudentDashboard 
       student={currentUser} 
+      exams={exams}
+      results={results}
+      completedExamIds={completedAttempts}
       onStartExam={(exam) => setCurrentExam(exam)} 
-      onLogout={() => setCurrentUser(null)} 
+      onLogout={handleLogout} 
+      globalLogo={globalLogo}
     />
   );
 };
