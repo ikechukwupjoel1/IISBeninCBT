@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MOCK_USERS, MOCK_EXAMS, MOCK_RESULTS } from './utils/mockData';
+import { MOCK_USERS, MOCK_EXAMS, MOCK_RESULTS, MOCK_HALLS } from './utils/mockData';
 import { User, UserRole, Exam, ExamResult } from './types';
 import StudentDashboard from './components/StudentDashboard';
 import AdminDashboard from './components/AdminDashboard';
@@ -18,6 +18,8 @@ const App: React.FC = () => {
   // Data State (Lifted up so Admin/Teacher updates reflect for Student)
   const [exams, setExams] = useState<Exam[]>(MOCK_EXAMS);
   const [results, setResults] = useState<any[]>(MOCK_RESULTS);
+  const [users, setUsers] = useState<User[]>(MOCK_USERS);
+  const [halls, setHalls] = useState<string[]>(MOCK_HALLS);
   const [globalLogo, setGlobalLogo] = useState<string>(''); // Base64 string for logo
   const [completedAttempts, setCompletedAttempts] = useState<string[]>([]); // List of Exam IDs taken by current session
 
@@ -38,16 +40,22 @@ const App: React.FC = () => {
     setError('');
 
     setTimeout(() => {
-      if (regNo === 'admin' && pin === 'admin') {
-        setCurrentUser(MOCK_USERS[0]);
+      // Check against all registered users
+      const foundUser = users.find(u => {
+        if (u.role === UserRole.ADMIN) return regNo === 'admin' && pin === 'admin';
+        if (u.role === UserRole.TEACHER) return (regNo === 'staff' && pin === 'school') || (u.id === regNo && u.pin === pin); // Allow mock fallback or exact match
+        return u.regNumber === regNo && u.pin === pin;
+      });
+
+      // Mock Fallbacks for Demo purposes if specific user not found in list but using demo creds
+      if (foundUser) {
+         setCurrentUser(foundUser);
+      } else if (regNo === 'admin' && pin === 'admin') {
+        setCurrentUser(users.find(u => u.role === UserRole.ADMIN) || MOCK_USERS[0]);
       } else if (regNo === 'staff' && pin === 'school') {
-        setCurrentUser(MOCK_USERS[2]); // Teacher
-      } else if (regNo && pin) {
-        setCurrentUser({ 
-          ...MOCK_USERS[1], 
-          name: regNo === 'IIS-2024-001' ? 'John Doe' : `Student ${regNo}`, 
-          regNumber: regNo 
-        });
+        setCurrentUser(users.find(u => u.role === UserRole.TEACHER) || MOCK_USERS[2]); 
+      } else if (regNo === 'IIS-2024-001' && pin === '12345') {
+         setCurrentUser(users.find(u => u.role === UserRole.STUDENT) || MOCK_USERS[1]);
       } else {
         setError('Invalid credentials. Try "admin/admin", "staff/school" or "IIS-2024-001/12345"');
       }
@@ -227,6 +235,10 @@ const App: React.FC = () => {
         onUpdateExams={setExams}
         globalLogo={globalLogo}
         onUpdateLogo={setGlobalLogo}
+        users={users}
+        onUpdateUsers={setUsers}
+        halls={halls}
+        onUpdateHalls={setHalls}
       />
     );
   }

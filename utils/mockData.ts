@@ -20,7 +20,20 @@ export const MOCK_USERS: User[] = [
     name: 'Mr. Rajesh Kumar',
     role: UserRole.TEACHER,
     avatar: 'https://ui-avatars.com/api/?name=Rajesh+Kumar&background=36609e&color=fff'
+  },
+  {
+    id: 'u4',
+    name: 'Mrs. Priya Sharma',
+    role: UserRole.TEACHER,
+    avatar: 'https://ui-avatars.com/api/?name=Priya+Sharma&background=36609e&color=fff'
   }
+];
+
+export const MOCK_HALLS = [
+  'Hall A (Science Block)',
+  'Hall B (Arts Block)',
+  'Computer Lab 1',
+  'Computer Lab 2'
 ];
 
 export const MOCK_RESULTS = [
@@ -68,6 +81,7 @@ export const MOCK_EXAMS: Exam[] = [
     totalQuestions: 5,
     status: ExamStatus.ACTIVE,
     assignedClass: 'SS3',
+    date: '2024-05-20',
     questions: [
       {
         id: 'q1',
@@ -117,6 +131,7 @@ export const MOCK_EXAMS: Exam[] = [
     totalQuestions: 0, // Placeholder
     status: ExamStatus.SCHEDULED,
     assignedClass: 'SS2',
+    date: '2024-06-15',
     questions: []
   }
 ];

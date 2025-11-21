@@ -24,6 +24,7 @@ export interface User {
   pin?: string;      // For students
   role: UserRole;
   avatar?: string;
+  grade?: string;
 }
 
 export interface Question {
@@ -47,6 +48,7 @@ export interface Exam {
   startTime?: Date;
   endTime?: Date;
   assignedClass: string;
+  date?: string;
 }
 
 export interface ExamResult {

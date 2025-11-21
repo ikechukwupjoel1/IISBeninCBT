@@ -28,6 +28,10 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
   const [bulkText, setBulkText] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
 
+  // Edit Question State
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
+  const [editForm, setEditForm] = useState({ text: '', correctAnswer: '', options: ['', '', '', ''] });
+
   const handleGenerateQuestions = async () => {
     if (!aiTopic) return;
     setIsGenerating(true);
@@ -74,6 +78,27 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
     } else {
         alert("Could not parse questions. Use format: Question | Op1,Op2,Op3,Op4 | CorrectAnswer");
     }
+  };
+
+  const openEditModal = (q: Question) => {
+    setEditingQuestion(q);
+    setEditForm({
+      text: q.text,
+      correctAnswer: String(q.correctAnswer),
+      options: q.options || ['', '', '', '']
+    });
+  };
+
+  const saveEditedQuestion = () => {
+    if (!editingQuestion) return;
+    
+    setGeneratedQuestions(prev => prev.map(q => q.id === editingQuestion.id ? {
+      ...q,
+      text: editForm.text,
+      options: editForm.options,
+      correctAnswer: editForm.correctAnswer
+    } : q));
+    setEditingQuestion(null);
   };
 
   const handlePublishExam = () => {
@@ -210,10 +235,13 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                         <div className="mt-8 space-y-4">
                             <h3 className="font-bold text-slate-800">Question Queue ({generatedQuestions.length})</h3>
                             {generatedQuestions.map((q, i) => (
-                                <div key={i} className="p-4 border border-slate-200 rounded-xl bg-slate-50/50">
-                                    <div className="flex justify-between">
-                                        <p className="font-medium text-slate-800 mb-2">{i+1}. {q.text}</p>
-                                        <button className="text-red-500 text-xs font-bold" onClick={() => setGeneratedQuestions(prev => prev.filter((_, idx) => idx !== i))}>REMOVE</button>
+                                <div key={i} className="p-4 border border-slate-200 rounded-xl bg-slate-50/50 group">
+                                    <div className="flex justify-between items-start">
+                                        <p className="font-medium text-slate-800 mb-2 flex-1">{i+1}. {q.text}</p>
+                                        <div className="flex gap-2">
+                                          <button className="text-brand-600 text-xs font-bold hover:underline" onClick={() => openEditModal(q)}>EDIT</button>
+                                          <button className="text-red-500 text-xs font-bold hover:underline" onClick={() => setGeneratedQuestions(prev => prev.filter((_, idx) => idx !== i))}>REMOVE</button>
+                                        </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-2 text-sm text-slate-600 ml-4">
                                         {q.options?.map(opt => (
@@ -304,6 +332,57 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                 </div>
              </Card>
           </div>
+      )}
+
+      {/* Edit Question Modal */}
+      {editingQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+           <Card className="w-full max-w-lg p-6 animate-in zoom-in duration-200">
+              <h3 className="font-bold text-lg mb-4">Edit Question</h3>
+              <div className="space-y-4">
+                <div>
+                  <Label>Question Text</Label>
+                  <textarea 
+                    className="w-full p-3 border border-slate-300 rounded-lg" 
+                    rows={2}
+                    value={editForm.text}
+                    onChange={(e) => setEditForm({...editForm, text: e.target.value})}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                   {editForm.options.map((opt, idx) => (
+                      <div key={idx}>
+                        <Label>Option {idx + 1}</Label>
+                        <Input 
+                           value={opt}
+                           onChange={(e: any) => {
+                             const newOpts = [...editForm.options];
+                             newOpts[idx] = e.target.value;
+                             setEditForm({...editForm, options: newOpts});
+                           }}
+                        />
+                      </div>
+                   ))}
+                </div>
+                <div>
+                   <Label>Correct Answer</Label>
+                   <select 
+                      className="w-full p-3 border border-slate-300 rounded-lg bg-white"
+                      value={editForm.correctAnswer}
+                      onChange={(e) => setEditForm({...editForm, correctAnswer: e.target.value})}
+                   >
+                      {editForm.options.map((opt, i) => (
+                        <option key={i} value={opt}>{opt}</option>
+                      ))}
+                   </select>
+                </div>
+              </div>
+              <div className="mt-6 flex justify-end gap-3">
+                  <Button variant="secondary" onClick={() => setEditingQuestion(null)}>Cancel</Button>
+                  <Button onClick={saveEditedQuestion}>Save Changes</Button>
+              </div>
+           </Card>
+        </div>
       )}
     </div>
   );
