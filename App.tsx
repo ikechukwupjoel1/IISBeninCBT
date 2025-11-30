@@ -161,6 +161,17 @@ const App: React.FC = () => {
     setUsers([]);
   };
 
+  const calculateGrade = (score: number, total: number) => {
+    if (total === 0) return 'N/A';
+    const percentage = (score / total) * 100;
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B';
+    if (percentage >= 60) return 'C';
+    if (percentage >= 50) return 'D';
+    return 'F';
+  };
+
   // Handle Exam Submission
   const handleExamSubmit = async (answers: Record<string, any>) => {
     if (!currentExam || !currentUser) return;
@@ -169,7 +180,9 @@ const App: React.FC = () => {
 
     let score = 0;
     currentExam.questions.forEach(q => {
-      if (answers[q.id] === q.correctAnswer) {
+      // Handle both snake_case (DB) and camelCase (types)
+      const correct = (q as any).correct_answer || q.correctAnswer;
+      if (answers[q.id] === correct) {
         score += q.points;
       }
     });
@@ -211,17 +224,6 @@ const App: React.FC = () => {
     setCurrentExam(null);
     setExamResult({ score, total, feedback, grade, subject: currentExamSubject });
     setLoginLoading(false);
-  };
-
-  const calculateGrade = (score: number, total: number) => {
-    if (total === 0) return 'N/A';
-    const percentage = (score / total) * 100;
-    if (percentage >= 90) return 'A+';
-    if (percentage >= 80) return 'A';
-    if (percentage >= 70) return 'B';
-    if (percentage >= 60) return 'C';
-    if (percentage >= 50) return 'D';
-    return 'F';
   };
 
   // -- RENDER VIEWS --
