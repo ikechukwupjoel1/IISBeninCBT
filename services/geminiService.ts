@@ -22,8 +22,8 @@ export const generateQuestions = async (topic: string, count: number, difficulty
             type: Type.OBJECT,
             properties: {
               text: { type: Type.STRING, description: "The question text" },
-              options: { 
-                type: Type.ARRAY, 
+              options: {
+                type: Type.ARRAY,
                 items: { type: Type.STRING },
                 description: "List of 4 possible answers"
               },
@@ -37,7 +37,7 @@ export const generateQuestions = async (topic: string, count: number, difficulty
     });
 
     const rawData = response.text ? JSON.parse(response.text) : [];
-    
+
     // Map to our internal Question type
     return rawData.map((q: any, index: number) => ({
       id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -59,11 +59,18 @@ export const explainPerformance = async (score: number, total: number, topic: st
   if (!apiKey) return "Great job completing the exam! (AI feedback unavailable)";
 
   try {
-    const response = await ai.models.generateContent({
+    // Create a timeout promise that resolves to a fallback message after 5 seconds
+    const timeoutPromise = new Promise<string>((resolve) => {
+      setTimeout(() => resolve("Great job! (AI feedback timed out)"), 5000);
+    });
+
+    const aiPromise = ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: `A student scored ${score} out of ${total} on a ${topic} exam. Provide a 2-sentence encouraging remark and a brief study tip based on this performance. Address the student directly.`
-    });
-    return response.text || "Keep up the good work!";
+    }).then(response => response.text || "Keep up the good work!");
+
+    // Race the AI request against the timeout
+    return await Promise.race([aiPromise, timeoutPromise]);
   } catch (error) {
     console.error("Error generating feedback:", error);
     return "Assessment complete.";
