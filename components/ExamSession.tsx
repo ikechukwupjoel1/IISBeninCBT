@@ -8,9 +8,10 @@ interface ExamSessionProps {
   exam: Exam;
   student: any;
   onSubmit: (answers: Record<string, any>) => void;
+  submitting?: boolean;
 }
 
-const ExamSession: React.FC<ExamSessionProps> = ({ exam, student, onSubmit }) => {
+const ExamSession: React.FC<ExamSessionProps> = ({ exam, student, onSubmit, submitting = false }) => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
   // Handle both camelCase (types) and snake_case (DB)
@@ -87,12 +88,14 @@ const ExamSession: React.FC<ExamSessionProps> = ({ exam, student, onSubmit }) =>
             <Icons.Clock className="w-5 h-5 opacity-75" />
             {formatTime(timeLeft)}
           </div>
-          <Button variant="danger" className="shadow-none border border-red-500 hover:bg-red-600 active:bg-red-700" onClick={() => {
-            if (window.confirm("Are you sure you want to finish the exam? This cannot be undone.")) {
-              handleFinishExam();
-            }
-          }}>
-            Finish & Submit
+          <Button variant="danger" className="shadow-none border border-red-500 hover:bg-red-600 active:bg-red-700"
+            disabled={submitting}
+            onClick={() => {
+              if (window.confirm("Are you sure you want to finish the exam? This cannot be undone.")) {
+                handleFinishExam();
+              }
+            }}>
+            {submitting ? 'Submitting...' : 'Finish & Submit'}
           </Button>
         </div>
       </header>
@@ -133,8 +136,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ exam, student, onSubmit }) =>
                   <label
                     key={opt}
                     className={`group flex items-center p-5 rounded-2xl border-2 cursor-pointer transition-all duration-200 ${answers[currentQuestion.id] === opt
-                        ? 'border-brand-600 bg-brand-50 shadow-inner ring-1 ring-brand-100'
-                        : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:shadow-sm bg-white'
+                      ? 'border-brand-600 bg-brand-50 shadow-inner ring-1 ring-brand-100'
+                      : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50 hover:shadow-sm bg-white'
                       }`}
                   >
                     <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center mr-6 transition-colors shrink-0 ${answers[currentQuestion.id] === opt ? 'border-brand-600' : 'border-slate-300 group-hover:border-brand-400'}`}>
@@ -160,8 +163,8 @@ const ExamSession: React.FC<ExamSessionProps> = ({ exam, student, onSubmit }) =>
                         <label
                           key={opt}
                           className={`flex-1 flex items-center justify-center p-8 rounded-2xl border-2 cursor-pointer transition-all ${answers[currentQuestion.id] === val
-                              ? 'border-brand-600 bg-brand-50 shadow-inner'
-                              : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50 bg-white'
+                            ? 'border-brand-600 bg-brand-50 shadow-inner'
+                            : 'border-slate-200 hover:border-brand-300 hover:bg-slate-50 bg-white'
                             }`}
                         >
                           <input

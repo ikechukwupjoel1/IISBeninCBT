@@ -59,9 +59,9 @@ export const explainPerformance = async (score: number, total: number, topic: st
   if (!apiKey) return "Great job completing the exam! (AI feedback unavailable)";
 
   try {
-    // Create a timeout promise that resolves to a fallback message after 5 seconds
+    // Create a timeout promise that resolves to a fallback message after 3 seconds
     const timeoutPromise = new Promise<string>((resolve) => {
-      setTimeout(() => resolve("Great job! (AI feedback timed out)"), 5000);
+      setTimeout(() => resolve("Great job! (AI feedback timed out)"), 3000);
     });
 
     const aiPromise = ai.models.generateContent({
