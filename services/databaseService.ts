@@ -431,4 +431,46 @@ export const databaseService = {
             return { data: null, error: error.message };
         }
     },
+
+    // ============================================
+    // APP SETTINGS
+    // ============================================
+
+    async getSetting(key: string) {
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .select('value')
+                .eq('key', key)
+                .single();
+
+            if (error) throw error;
+            return { data: data?.value || null, error: null };
+        } catch (error: any) {
+            console.error('Get setting error:', error);
+            return { data: null, error: error.message };
+        }
+    },
+
+    async updateSetting(key: string, value: string) {
+        try {
+            const { data, error } = await supabase
+                .from('app_settings')
+                .upsert({
+                    key,
+                    value,
+                    updated_at: new Date().toISOString()
+                }, {
+                    onConflict: 'key'
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { data, error: null };
+        } catch (error: any) {
+            console.error('Update setting error:', error);
+            return { data: null, error: error.message };
+        }
+    },
 };

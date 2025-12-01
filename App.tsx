@@ -42,7 +42,19 @@ const App: React.FC = () => {
   // Check for existing session on mount
   useEffect(() => {
     checkSession();
+    loadGlobalSettings();
   }, []);
+
+  const loadGlobalSettings = async () => {
+    try {
+      const { data: logoUrl } = await databaseService.getSetting('global_logo');
+      if (logoUrl) {
+        setGlobalLogo(logoUrl);
+      }
+    } catch (error) {
+      console.error('Failed to load global settings:', error);
+    }
+  };
 
   const checkSession = async () => {
     setLoading(true);
@@ -338,6 +350,17 @@ const App: React.FC = () => {
 
   // 2. Admin Dashboard
   if (currentUser.role === UserRole.ADMIN) {
+    const handleLogoUpdate = async (logoUrl: string) => {
+      setGlobalLogo(logoUrl);
+      try {
+        await databaseService.updateSetting('global_logo', logoUrl);
+        success('Logo updated successfully!');
+      } catch (error) {
+        console.error('Failed to save logo:', error);
+        showError('Logo displayed but failed to save to database');
+      }
+    };
+
     return (
       <>
         <SkipLink />
@@ -347,7 +370,7 @@ const App: React.FC = () => {
           exams={exams}
           onUpdateExams={setExams}
           globalLogo={globalLogo}
-          onUpdateLogo={setGlobalLogo}
+          onUpdateLogo={handleLogoUpdate}
           users={users}
           onUpdateUsers={setUsers}
           halls={halls}
