@@ -210,15 +210,15 @@ const App: React.FC = () => {
 
       // Save result to database
       try {
-        await databaseService.createResult({
-          exam_id: currentExam.id,
-          student_id: currentUser.id,
+        await databaseService.submitExamResult({
+          examId: currentExam.id,
+          studentId: currentUser.id,
           score,
-          total_score: total,
+          totalScore: total,
           answers,
           grade,
           subject: currentExam.subject,
-          exam_title: currentExam.title
+          examTitle: currentExam.title
         });
       } catch (error) {
         console.error('Failed to save result:', error);
