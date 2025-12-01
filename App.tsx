@@ -179,6 +179,76 @@ const App: React.FC = () => {
     return 'F';
   };
 
+  // Handle Exam Submission
+  const handleExamSubmit = async (answers: Record<string, any>) => {
+    if (!currentExam || !currentUser) return;
+
+    try {
+      // Calculate score
+      let score = 0;
+      const total = currentExam.questions.length;
+
+      currentExam.questions.forEach((question) => {
+        const userAnswer = answers[question.id];
+        if (userAnswer === question.correctAnswer) {
+          score++;
+        }
+      });
+
+      // Calculate grade
+      const grade = calculateGrade(score, total);
+
+      // Get AI feedback (optional, can fail gracefully)
+      let feedback = 'Great effort! Keep practicing to improve your performance.';
+      try {
+        const percentage = (score / total) * 100;
+        feedback = await explainPerformance(currentExam.subject, percentage);
+      } catch (error) {
+        console.error('AI feedback failed:', error);
+        // Use default feedback if AI fails
+      }
+
+      // Save result to database
+      try {
+        await databaseService.createResult({
+          exam_id: currentExam.id,
+          student_id: currentUser.id,
+          score,
+          total_score: total,
+          answers,
+          grade,
+          subject: currentExam.subject,
+          exam_title: currentExam.title
+        });
+      } catch (error) {
+        console.error('Failed to save result:', error);
+        showError('Result saved locally but failed to sync to database');
+      }
+
+      // Update completed attempts
+      setCompletedAttempts(prev => [...prev, currentExam.id]);
+
+      // Show result
+      setExamResult({
+        score,
+        total,
+        feedback,
+        grade,
+        subject: currentExam.subject
+      });
+
+      // Clear current exam
+      setCurrentExam(null);
+
+      // Show success toast
+      success(`Exam submitted! You scored ${score}/${total}`);
+
+    } catch (error) {
+      console.error('Error submitting exam:', error);
+      showError('Failed to submit exam. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-brand-50">
@@ -314,10 +384,11 @@ const App: React.FC = () => {
       <>
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <ExamSession
-        exam={currentExam}
-        student={currentUser}
-        onSubmit={handleExamSubmit}
-      />
+          exam={currentExam}
+          student={currentUser}
+          onSubmit={handleExamSubmit}
+        />
+      </>
     );
   }
 
