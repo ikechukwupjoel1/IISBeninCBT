@@ -273,18 +273,19 @@ const App: React.FC = () => {
         <SkipLink />
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <AdminDashboard
-        onLogout={handleLogout}
-        exams={exams}
-        onUpdateExams={setExams}
-        globalLogo={globalLogo}
-        onUpdateLogo={setGlobalLogo}
-        users={users}
-        onUpdateUsers={setUsers}
-        halls={halls}
-        onUpdateHalls={setHalls}
-        invigilators={invigilators}
-        onUpdateInvigilators={setInvigilators}
-      />
+          onLogout={handleLogout}
+          exams={exams}
+          onUpdateExams={setExams}
+          globalLogo={globalLogo}
+          onUpdateLogo={setGlobalLogo}
+          users={users}
+          onUpdateUsers={setUsers}
+          halls={halls}
+          onUpdateHalls={setHalls}
+          invigilators={invigilators}
+          onUpdateInvigilators={setInvigilators}
+        />
+      </>
     );
   }
 
@@ -295,14 +296,14 @@ const App: React.FC = () => {
         <SkipLink />
         <ToastContainer toasts={toasts} onRemove={removeToast} />
         <TeacherDashboard
-        onLogout={handleLogout}
-        teacherName={currentUser.name}
-        teacherId={currentUser.id}
-        exams={exams}
-        onRefreshData={() => loadUserData(currentUser)}
-        results={results}
-        globalLogo={globalLogo}
-      />
+          onLogout={handleLogout}
+          teacherName={currentUser.name}
+          teacherId={currentUser.id}
+          exams={exams}
+          onRefreshData={() => loadUserData(currentUser)}
+          results={results}
+          globalLogo={globalLogo}
+        />
       </>
     );
   }
