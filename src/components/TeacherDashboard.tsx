@@ -153,30 +153,45 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
         }
     };
 
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
     return (
         <div className="min-h-screen bg-slate-50 flex font-sans">
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/50 z-20 md:hidden"
+                    onClick={() => setIsSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 bg-white border-r border-slate-200 flex flex-col shrink-0">
-                <div className="p-6 border-b border-slate-100 flex items-center gap-3">
-                    <Logo className="w-10 h-10" src={globalLogo} />
-                    <span className="font-serif font-bold text-brand-900">Staff Portal</span>
+            <aside className={`fixed inset-y-0 left-0 z-30 w-64 bg-white border-r border-slate-200 flex flex-col transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="p-6 border-b border-slate-100 flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                        <Logo className="w-10 h-10" src={globalLogo} />
+                        <span className="font-serif font-bold text-brand-900">Staff Portal</span>
+                    </div>
+                    <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-400 hover:text-slate-600">
+                        <Icons.X className="w-6 h-6" />
+                    </button>
                 </div>
-                <nav className="p-4 space-y-2">
+                <nav className="p-4 space-y-2 overflow-y-auto">
                     <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-widest">Menu</div>
                     <button
-                        onClick={() => setActiveTab('create')}
+                        onClick={() => { setActiveTab('create'); setIsSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'create' ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                         <Icons.Plus className="w-4 h-4" /> Create Exam
                     </button>
                     <button
-                        onClick={() => setActiveTab('bank')}
+                        onClick={() => { setActiveTab('bank'); setIsSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'bank' ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                         <Icons.BookOpen className="w-4 h-4" /> My Question Bank
                     </button>
                     <button
-                        onClick={() => setActiveTab('results')}
+                        onClick={() => { setActiveTab('results'); setIsSidebarOpen(false); }}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'results' ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                         <Icons.Dashboard className="w-4 h-4" /> Past Results
@@ -200,7 +215,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
 
                 {activeTab === 'create' && (
                     <div className="max-w-4xl mx-auto animate-in fade-in">
-                        <h1 className="text-2xl font-serif font-bold text-brand-900 mb-2">Upload Assessment</h1>
+                        <div className="flex items-center gap-3 mb-2">
+                            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-slate-500 hover:text-brand-900">
+                                <Icons.Menu className="w-6 h-6" />
+                            </button>
+                            <h1 className="text-2xl font-serif font-bold text-brand-900">Upload Assessment</h1>
+                        </div>
                         <p className="text-slate-500 mb-8">Create a new Computer Based Test using AI assistance or manual upload.</p>
 
                         <Card className="p-8 border-0 shadow-soft bg-white">
@@ -302,7 +322,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
 
                 {activeTab === 'bank' && (
                     <div className="animate-in fade-in">
-                        <h1 className="text-2xl font-serif font-bold text-brand-900 mb-6">Question Bank</h1>
+                        <div className="flex items-center gap-3 mb-6">
+                            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-slate-500 hover:text-brand-900">
+                                <Icons.Menu className="w-6 h-6" />
+                            </button>
+                            <h1 className="text-2xl font-serif font-bold text-brand-900">Question Bank</h1>
+                        </div>
                         <div className="grid gap-6">
                             {exams.map(exam => (
                                 <Card key={exam.id} className="p-6">
@@ -327,28 +352,35 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
 
                 {activeTab === 'results' && (
                     <div className="animate-in fade-in">
-                        <h1 className="text-2xl font-serif font-bold text-brand-900 mb-6">Past Results</h1>
+                        <div className="flex items-center gap-3 mb-6">
+                            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-slate-500 hover:text-brand-900">
+                                <Icons.Menu className="w-6 h-6" />
+                            </button>
+                            <h1 className="text-2xl font-serif font-bold text-brand-900">Past Results</h1>
+                        </div>
                         <Card className="overflow-hidden">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50 border-b border-slate-100">
-                                    <tr>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Date</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Exam</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Score</th>
-                                        <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Grade</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100">
-                                    {results.map((res: any) => (
-                                        <tr key={res.id} className="hover:bg-slate-50">
-                                            <td className="px-6 py-4 text-sm">{res.date}</td>
-                                            <td className="px-6 py-4 font-medium">{res.examTitle}</td>
-                                            <td className="px-6 py-4 text-sm">{res.score} / {res.totalScore}</td>
-                                            <td className="px-6 py-4"><Badge color={res.grade.startsWith('A') ? 'green' : res.grade === 'F' ? 'red' : 'blue'}>{res.grade}</Badge></td>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left min-w-[600px]">
+                                    <thead className="bg-slate-50 border-b border-slate-100">
+                                        <tr>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Date</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Exam</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Score</th>
+                                            <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase">Grade</th>
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {results.map((res: any) => (
+                                            <tr key={res.id} className="hover:bg-slate-50">
+                                                <td className="px-6 py-4 text-sm">{res.date}</td>
+                                                <td className="px-6 py-4 font-medium">{res.examTitle}</td>
+                                                <td className="px-6 py-4 text-sm">{res.score} / {res.totalScore}</td>
+                                                <td className="px-6 py-4"><Badge color={res.grade.startsWith('A') ? 'green' : res.grade === 'F' ? 'red' : 'blue'}>{res.grade}</Badge></td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
                         </Card>
                     </div>
                 )}
