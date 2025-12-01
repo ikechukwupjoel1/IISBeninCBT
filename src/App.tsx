@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -9,14 +9,15 @@ import { UserRole } from './types';
 import { databaseService } from './services/databaseService';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { ErrorBoundary } from './components/ui/ErrorBoundary';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Lazy load pages
-const Login = lazy(() => import('./pages/Login').then(module => ({ default: module.Login })));
-const AdminDashboardPage = lazy(() => import('./pages/AdminDashboardPage').then(module => ({ default: module.AdminDashboardPage })));
-const TeacherDashboardPage = lazy(() => import('./pages/TeacherDashboardPage').then(module => ({ default: module.TeacherDashboardPage })));
-const StudentDashboardPage = lazy(() => import('./pages/StudentDashboardPage').then(module => ({ default: module.StudentDashboardPage })));
-const ExamPage = lazy(() => import('./pages/ExamPage').then(module => ({ default: module.ExamPage })));
-const ExamResultPage = lazy(() => import('./pages/ExamResultPage').then(module => ({ default: module.ExamResultPage })));
+const Login = lazyWithRetry(() => import('./pages/Login').then(module => ({ default: module.Login })));
+const AdminDashboardPage = lazyWithRetry(() => import('./pages/AdminDashboardPage').then(module => ({ default: module.AdminDashboardPage })));
+const TeacherDashboardPage = lazyWithRetry(() => import('./pages/TeacherDashboardPage').then(module => ({ default: module.TeacherDashboardPage })));
+const StudentDashboardPage = lazyWithRetry(() => import('./pages/StudentDashboardPage').then(module => ({ default: module.StudentDashboardPage })));
+const ExamPage = lazyWithRetry(() => import('./pages/ExamPage').then(module => ({ default: module.ExamPage })));
+const ExamResultPage = lazyWithRetry(() => import('./pages/ExamResultPage').then(module => ({ default: module.ExamResultPage })));
 
 const App: React.FC = () => {
   const [globalLogo, setGlobalLogo] = useState<string>('');
