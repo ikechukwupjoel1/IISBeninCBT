@@ -58,11 +58,11 @@ async function createDemoAccounts() {
     try {
       console.log(`📧 Creating ${account.role}: ${account.email}...`);
 
-      // Create auth user
+      // Create auth user with email auto-confirmed
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: account.email,
         password: account.password,
-        email_confirm: true, // Auto-confirm email
+        email_confirm: true, // Auto-confirm email - bypasses verification
         user_metadata: {
           name: account.name,
           role: account.role
