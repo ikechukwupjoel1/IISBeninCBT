@@ -6,6 +6,7 @@ import { Logo } from '../components/ui/Logo';
 import { Particles } from '../components/ui/Particles';
 import { Icons } from '../components/ui/Icons';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { z, ZodError } from 'zod';
 
 interface LoginProps {
@@ -22,6 +23,7 @@ const loginSchema = z.object({
 export const Login: React.FC<LoginProps> = ({ globalLogo }) => {
     const navigate = useNavigate();
     const { success, error: showError } = useToast();
+    const { login } = useAuth();
     const [regNo, setRegNo] = useState('');
     const [pin, setPin] = useState('');
     const [error, setError] = useState('');
@@ -58,19 +60,27 @@ export const Login: React.FC<LoginProps> = ({ globalLogo }) => {
             }
 
             if (result.error || !result.user) {
+                console.log('Login failed:', result.error);
                 setError(result.error || 'Invalid credentials. Please check your ID/Email and PIN.');
                 showError(result.error || 'Invalid credentials. Please try again.');
             } else {
+                console.log('Login successful. User:', result.user);
+                console.log('User Role (Raw):', result.user.role);
+
+                // Update global auth state
+                login(result.user);
+
                 success(`Welcome back, ${result.user.name}!`);
                 // Navigate based on role
-                switch (result.user.role) {
-                    case 'admin':
+                const role = result.user.role.toUpperCase();
+                switch (role) {
+                    case 'ADMIN':
                         navigate('/admin');
                         break;
-                    case 'teacher':
+                    case 'TEACHER':
                         navigate('/teacher');
                         break;
-                    case 'student':
+                    case 'STUDENT':
                         navigate('/student');
                         break;
                     default:
