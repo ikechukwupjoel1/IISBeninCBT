@@ -1,7 +1,7 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { Question, QuestionType } from "../types";
 
-const apiKey = process.env.GEMINI_API_KEY || '';
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
 const ai = new GoogleGenAI({ apiKey });
 
 export const generateQuestions = async (topic: string, count: number, difficulty: string): Promise<Question[]> => {
@@ -55,24 +55,27 @@ export const generateQuestions = async (topic: string, count: number, difficulty
   }
 };
 
-export const explainPerformance = async (score: number, total: number, topic: string): Promise<string> => {
-  if (!apiKey) return "Great job completing the exam! (AI feedback unavailable)";
+export const explainPerformance = async (subject: string, percentage: number): Promise<string> => {
+  if (!apiKey) {
+    console.warn('Gemini API key not configured');
+    return "Great job completing the exam! Keep studying to improve your performance.";
+  }
 
   try {
-    // Create a timeout promise that resolves to a fallback message after 3 seconds
+    // Create a timeout promise that resolves to a fallback message after 5 seconds
     const timeoutPromise = new Promise<string>((resolve) => {
-      setTimeout(() => resolve("Great job! (AI feedback timed out)"), 3000);
+      setTimeout(() => resolve("Great effort! Continue practicing to strengthen your understanding."), 5000);
     });
 
     const aiPromise = ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: `A student scored ${score} out of ${total} on a ${topic} exam. Provide a 2-sentence encouraging remark and a brief study tip based on this performance. Address the student directly.`
-    }).then(response => response.text || "Keep up the good work!");
+      model: "gemini-2.0-flash-exp",
+      contents: `A student scored ${percentage.toFixed(1)}% on a ${subject} exam. Provide a 2-sentence encouraging remark and a brief study tip. Address the student directly. Be specific and supportive.`
+    }).then(response => response.text || "Well done! Keep up the good work.");
 
     // Race the AI request against the timeout
     return await Promise.race([aiPromise, timeoutPromise]);
   } catch (error) {
-    console.error("Error generating feedback:", error);
-    return "Assessment complete.";
+    console.error("Error generating AI feedback:", error);
+    return "Exam completed successfully. Review your answers to identify areas for improvement.";
   }
 };
