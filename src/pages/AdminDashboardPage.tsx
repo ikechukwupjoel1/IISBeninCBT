@@ -9,6 +9,7 @@ import { useExams } from '../hooks/useExams';
 import { useUsers } from '../hooks/useUsers';
 import { useHalls } from '../hooks/useHalls';
 import { useInvigilators } from '../hooks/useInvigilators';
+import { useResults } from '../hooks/useResults';
 import { DashboardSkeleton } from '../components/ui/DashboardSkeleton';
 
 export const AdminDashboardPage: React.FC = () => {
@@ -23,8 +24,9 @@ export const AdminDashboardPage: React.FC = () => {
     const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useUsers();
     const { data: halls = [], isLoading: hallsLoading, refetch: refetchHalls } = useHalls();
     const { data: invigilators = [], isLoading: invigilatorsLoading, refetch: refetchInvigilators } = useInvigilators();
+    const { data: results = [], isLoading: resultsLoading, refetch: refetchResults } = useResults('admin');
 
-    const isLoading = examsLoading || usersLoading || hallsLoading || invigilatorsLoading;
+    const isLoading = examsLoading || usersLoading || hallsLoading || invigilatorsLoading || resultsLoading;
 
     useEffect(() => {
         loadGlobalLogo();
@@ -77,6 +79,8 @@ export const AdminDashboardPage: React.FC = () => {
                 onUpdateHalls={handleUpdateHalls}
                 invigilators={invigilators}
                 onUpdateInvigilators={handleUpdateInvigilators}
+                results={results}
+                onUpdateResults={refetchResults}
             />
         </>
     );

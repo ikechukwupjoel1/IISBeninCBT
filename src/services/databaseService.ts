@@ -368,6 +368,28 @@ export const databaseService = {
         }
     },
 
+    async updateResult(resultId: string, updates: { score?: number; totalScore?: number; grade?: string; answers?: Record<string, any> }) {
+        try {
+            const { data, error } = await supabase
+                .from('exam_results')
+                .update({
+                    score: updates.score,
+                    total_score: updates.totalScore,
+                    grade: updates.grade,
+                    answers: updates.answers
+                })
+                .eq('id', resultId)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return { data, error: null };
+        } catch (error: any) {
+            console.error('Update result error:', error);
+            return { data: null, error: error.message };
+        }
+    },
+
     // ============================================
     // HALLS
     // ============================================

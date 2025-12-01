@@ -56,6 +56,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
         matchingPairs: [{ left: '', right: '' }, { left: '', right: '' }]
     });
 
+    // Marking State
+    const [markingResult, setMarkingResult] = useState<any | null>(null);
+    const [markingExam, setMarkingExam] = useState<Exam | null>(null);
+    const [marks, setMarks] = useState<Record<string, number>>({});
+    const [showMarkingModal, setShowMarkingModal] = useState(false);
+
     const handleGenerateQuestions = async () => {
         if (!aiTopic) return;
         setIsGenerating(true);
@@ -153,6 +159,59 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
             correctAnswer: editForm.correctAnswer
         } : q));
         setEditingQuestion(null);
+    };
+
+    const handleOpenMarking = async (result: any) => {
+        setMarkingResult(result);
+        try {
+            const { data: exam } = await databaseService.getExamById(result.exam_id);
+            if (exam) {
+                setMarkingExam(exam);
+                // Initialize marks from existing score or default to 0 (or try to parse if we stored per-question marks)
+                // For now, we'll start fresh or maybe we can infer? 
+                // Let's just initialize with 0 for now, or maybe we can't easily know previous per-question marks unless we stored them.
+                // If we want to support re-marking, we'd need to store the breakdown. 
+                // For this MVP, we'll assume manual marking starts from scratch or we just let them enter.
+                setMarks({});
+                setShowMarkingModal(true);
+            }
+        } catch (error) {
+            console.error("Failed to load exam details for marking", error);
+        }
+    };
+
+    const handleCalculateTotal = (): number => {
+        const total = (Object.values(marks) as number[]).reduce((sum, mark) => sum + mark, 0);
+        return total;
+    };
+
+    const handleSaveMarks = async () => {
+        if (!markingResult) return;
+        const totalScore = handleCalculateTotal();
+
+        // Determine grade (simple logic for now, can be expanded)
+        let grade = 'F';
+        const percentage = (totalScore / (Number(markingResult.total_score) || 100)) * 100; // Use exam total if available
+        if (percentage >= 90) grade = 'A+';
+        else if (percentage >= 80) grade = 'A';
+        else if (percentage >= 70) grade = 'B';
+        else if (percentage >= 60) grade = 'C';
+        else if (percentage >= 50) grade = 'D';
+
+        try {
+            await databaseService.updateResult(String(markingResult.id), {
+                score: totalScore,
+                grade: grade,
+                // We could store the marks breakdown in 'answers' or a new field if we wanted to persist it
+                // For now, just updating the total score is the requirement.
+            });
+            onRefreshData();
+            setShowMarkingModal(false);
+            setMarkingResult(null);
+            setMarkingExam(null);
+        } catch (error) {
+            console.error("Failed to save marks", error);
+        }
     };
 
     const handlePublishExam = async () => {
@@ -778,6 +837,73 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                         <div className="mt-6 flex justify-end gap-3">
                             <Button variant="secondary" onClick={() => setEditingQuestion(null)}>Cancel</Button>
                             <Button onClick={saveEditedQuestion}>Save Changes</Button>
+                        </div>
+                    </Card>
+                </div>
+            )}
+            {/* Marking Modal */}
+            {showMarkingModal && markingExam && markingResult && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h3 className="text-xl font-bold text-brand-900">Marking: {markingResult.studentName || markingResult.student_id}</h3>
+                                <p className="text-slate-500">{markingExam.title}</p>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <div className="text-right">
+                                    <p className="text-sm text-slate-500">Total Score</p>
+                                    <p className="text-2xl font-bold text-brand-600">{handleCalculateTotal()} / {markingExam.questions.reduce((sum, q) => sum + q.points, 0)}</p>
+                                </div>
+                                <Button onClick={handleSaveMarks}>Save & Close</Button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-8">
+                            {markingExam.questions.map((question, index) => {
+                                const studentAnswer = markingResult.answers ? markingResult.answers[question.id] : 'No answer';
+                                return (
+                                    <div key={question.id} className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                                        <div className="flex justify-between items-start mb-4">
+                                            <div className="flex-1">
+                                                <h4 className="font-bold text-slate-800 mb-2">Q{index + 1}: {question.text}</h4>
+                                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                                    <div className="p-3 bg-white rounded-lg border border-slate-200">
+                                                        <span className="block text-xs text-slate-400 uppercase mb-1">Student Answer</span>
+                                                        <span className="font-medium text-slate-700">
+                                                            {Array.isArray(studentAnswer) ? studentAnswer.join(', ') : String(studentAnswer)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                                                        <span className="block text-xs text-green-600 uppercase mb-1">Correct Answer</span>
+                                                        <span className="font-medium text-green-800">
+                                                            {Array.isArray(question.correctAnswer) ? question.correctAnswer.join(', ') : String(question.correctAnswer)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="ml-4 w-32">
+                                                <Label>Marks (Max: {question.points})</Label>
+                                                <Input
+                                                    type="number"
+                                                    min="0"
+                                                    max={question.points}
+                                                    value={marks[question.id] || 0}
+                                                    onChange={(e) => setMarks({
+                                                        ...marks,
+                                                        [question.id]: Number(e.target.value)
+                                                    })}
+                                                    className="text-right font-bold"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+
+                        <div className="mt-6 flex justify-end">
+                            <Button variant="ghost" onClick={() => setShowMarkingModal(false)}>Cancel</Button>
                         </div>
                     </Card>
                 </div>

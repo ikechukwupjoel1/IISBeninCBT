@@ -5,6 +5,7 @@ import { MOCK_STATS } from '../utils/mockData';
 import { Button, Card, Input, Badge, Label } from './ui/UI';
 import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
+import { databaseService } from '../services/databaseService';
 import { Exam, ExamStatus, User, UserRole, InvigilatorAssignment, ExamType } from '../types';
 
 interface AdminDashboardProps {
@@ -19,6 +20,8 @@ interface AdminDashboardProps {
   onUpdateHalls: React.Dispatch<React.SetStateAction<string[]>>;
   invigilators: InvigilatorAssignment[];
   onUpdateInvigilators: React.Dispatch<React.SetStateAction<InvigilatorAssignment[]>>;
+  results: any[];
+  onUpdateResults: () => void;
 }
 
 const SCHOOL_CLASSES = [
@@ -37,9 +40,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   halls,
   onUpdateHalls,
   invigilators,
-  onUpdateInvigilators
+  onUpdateInvigilators,
+  results,
+  onUpdateResults
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invigilators' | 'users' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invigilators' | 'users' | 'settings' | 'grading'>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Schedule Modal State
@@ -79,6 +84,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   // Invigilator Assignment State
   const [assignStaffId, setAssignStaffId] = useState('');
   const [assignHall, setAssignHall] = useState('');
+
+  // Grading State
+  const [editingResult, setEditingResult] = useState<any | null>(null);
+  const [showGradeModal, setShowGradeModal] = useState(false);
+  const [gradeForm, setGradeForm] = useState({ score: 0, totalScore: 0, grade: '' });
 
   // --- Schedule Logic ---
   const handleEditClick = (exam: Exam) => {
@@ -288,7 +298,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setAssignHall('');
   };
 
-  // --- Helper for Print ---
+  const handleEditGrade = (result: any) => {
+    setEditingResult(result);
+    setGradeForm({
+      score: result.score,
+      totalScore: result.totalScore,
+      grade: result.grade
+    });
+    setShowGradeModal(true);
+  };
+
+  const handleSaveGrade = async () => {
+    if (!editingResult) return;
+    try {
+      await databaseService.updateResult(editingResult.id, gradeForm);
+      onUpdateResults();
+      setShowGradeModal(false);
+      setEditingResult(null);
+    } catch (error) {
+      console.error('Failed to update grade:', error);
+    }
+  };
+
+  // --- Render Helpers ---for Print ---
   const printCredentials = () => {
     const content = `
         <html>
@@ -364,19 +396,30 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
           >
             <Icons.Clock className="w-5 h-5" /> Schedule Exams
           </button>
-          <button
+          <Button
+            variant={activeTab === 'invigilators' ? 'primary' : 'ghost'}
+            className="w-full justify-start gap-3"
             onClick={() => { setActiveTab('invigilators'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center gap-4 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'invigilators' ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-200' : 'text-slate-500 hover:bg-slate-50'}`}
           >
-            <Icons.Users className="w-5 h-5" /> Invigilators
-          </button>
-          <button
+            <Icons.Users className="w-5 h-5" />
+            Invigilators
+          </Button>
+          <Button
+            variant={activeTab === 'grading' ? 'primary' : 'ghost'}
+            className="w-full justify-start gap-3"
+            onClick={() => { setActiveTab('grading'); setIsSidebarOpen(false); }}
+          >
+            <Icons.Award className="w-5 h-5" />
+            Grading
+          </Button>
+          <Button
+            variant={activeTab === 'users' ? 'primary' : 'ghost'}
+            className="w-full justify-start gap-3"
             onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}
-            className={`w-full flex items-center gap-4 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'users' ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-200' : 'text-slate-500 hover:bg-slate-50'}`}
           >
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             User Management
-          </button>
+          </Button>
           <button
             onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'settings' ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-200' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -934,6 +977,108 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <Button variant="secondary" onClick={() => setCredentialsPopup(null)}>Close</Button>
               <Button onClick={printCredentials}>Print Slip</Button>
+            </div>
+          </Card>
+        </div>
+      )}
+      {activeTab === 'grading' && (
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-2xl font-bold text-brand-900">Grading Management</h2>
+              <p className="text-slate-500">Modify student grades and scores</p>
+            </div>
+          </div>
+
+          <Card className="overflow-hidden border-0 shadow-lg">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-xs uppercase tracking-wider text-slate-500">
+                    <th className="p-4 font-semibold">Student</th>
+                    <th className="p-4 font-semibold">Exam</th>
+                    <th className="p-4 font-semibold">Score</th>
+                    <th className="p-4 font-semibold">Grade</th>
+                    <th className="p-4 font-semibold">Date</th>
+                    <th className="p-4 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {results.map((result) => (
+                    <tr key={result.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="p-4">
+                        <div className="font-medium text-brand-900">{result.studentName || 'Unknown Student'}</div>
+                        <div className="text-xs text-slate-500">{result.studentId}</div>
+                      </td>
+                      <td className="p-4">
+                        <div className="text-sm text-slate-700">{result.examTitle}</div>
+                        <div className="text-xs text-slate-500">{result.subject}</div>
+                      </td>
+                      <td className="p-4">
+                        <Badge variant={result.score / result.totalScore >= 0.5 ? 'success' : 'danger'}>
+                          {result.score} / {result.totalScore}
+                        </Badge>
+                      </td>
+                      <td className="p-4">
+                        <span className="font-bold text-slate-700">{result.grade}</span>
+                      </td>
+                      <td className="p-4 text-sm text-slate-500">
+                        {new Date(result.date).toLocaleDateString()}
+                      </td>
+                      <td className="p-4 text-right">
+                        <Button size="sm" variant="outline" onClick={() => handleEditGrade(result)}>
+                          Edit
+                        </Button>
+                      </td>
+                    </tr>
+                  ))}
+                  {results.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-slate-500">
+                        No results found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {/* Grade Edit Modal */}
+      {showGradeModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+          <Card className="w-full max-w-md p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <h3 className="text-xl font-bold text-brand-900 mb-4">Edit Grade</h3>
+            <div className="space-y-4">
+              <div>
+                <Label>Score</Label>
+                <Input
+                  type="number"
+                  value={gradeForm.score}
+                  onChange={(e) => setGradeForm({ ...gradeForm, score: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Total Score</Label>
+                <Input
+                  type="number"
+                  value={gradeForm.totalScore}
+                  onChange={(e) => setGradeForm({ ...gradeForm, totalScore: Number(e.target.value) })}
+                />
+              </div>
+              <div>
+                <Label>Grade (Letter)</Label>
+                <Input
+                  value={gradeForm.grade}
+                  onChange={(e) => setGradeForm({ ...gradeForm, grade: e.target.value })}
+                />
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button variant="ghost" onClick={() => setShowGradeModal(false)}>Cancel</Button>
+                <Button onClick={handleSaveGrade}>Save Changes</Button>
+              </div>
             </div>
           </Card>
         </div>
