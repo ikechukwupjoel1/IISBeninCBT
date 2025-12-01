@@ -7,6 +7,8 @@ import ExamSession from './components/ExamSession';
 import { Button, Label, Card, Input } from './components/ui/UI';
 import { Logo } from './components/ui/Logo';
 import { Particles } from './components/ui/Particles';
+import { SkipLink } from './components/ui/SkipLink';
+import { ToastContainer, useToast } from './components/ui/Toast';
 import { explainPerformance } from './services/geminiService';
 import { Icons } from './components/ui/Icons';
 import { authService } from './services/authService';
@@ -16,6 +18,7 @@ const App: React.FC = () => {
   // -- GLOBAL STATE --
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toasts, showToast, removeToast, success, error: showError } = useToast();
 
   // Data State (Now from Supabase)
   const [exams, setExams] = useState<Exam[]>([]);
@@ -137,12 +140,15 @@ const App: React.FC = () => {
 
       if (result.error || !result.user) {
         setError(result.error || 'Invalid credentials. Please check your ID/Email and PIN.');
+        showError(result.error || 'Invalid credentials. Please try again.');
       } else {
         setCurrentUser(result.user);
         await loadUserData(result.user);
+        success(`Welcome back, ${result.user.name}!`);
       }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
+      showError(err.message || 'Login failed. Please try again.');
     } finally {
       setLoginLoading(false);
     }
@@ -159,6 +165,7 @@ const App: React.FC = () => {
     setExams([]);
     setResults([]);
     setUsers([]);
+    success('You have been signed out successfully.');
   };
 
   const calculateGrade = (score: number, total: number) => {
@@ -166,11 +173,19 @@ const App: React.FC = () => {
     const percentage = (score / total) * 100;
     if (percentage >= 90) return 'A+';
     if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B';
+    if (percentage >= 60) return 'C';
+    if (percentage >= 50) return 'D';
+    return 'F';
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-brand-50">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="text-center" role="status" aria-live="polite">
+          <div className="w-16 h-16 border-4 border-brand-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" aria-hidden="true"></div>
           <p className="text-brand-600 font-medium">Loading...</p>
+          <span className="sr-only">Loading application, please wait...</span>
         </div>
       </div>
     );
@@ -179,72 +194,85 @@ const App: React.FC = () => {
   // 1. Login Screen
   if (!currentUser) {
     return (
-      <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-brand-50">
-        <Particles />
-        <div className="w-full max-w-md p-8 relative z-10 animate-in zoom-in duration-300">
-          <Card className="p-8 md:p-10 shadow-2xl border-t-4 border-brand-600 backdrop-blur-lg bg-white/95">
-            <div className="flex flex-col items-center mb-8">
-              <div className="mb-4 relative">
-                <div className="absolute inset-0 bg-brand-200 rounded-full blur-lg opacity-50 animate-pulse"></div>
-                <Logo className="w-24 h-24 relative z-10" src={globalLogo} />
-              </div>
-              <h1 className="text-2xl font-serif font-bold text-brand-900 text-center">IISBenin CBT</h1>
-              <p className="text-slate-500 text-sm mt-2 font-medium">Secure Assessment Portal</p>
-            </div>
-
-            <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                <Label htmlFor="regNo">Registration No / Staff Email</Label>
-                <Input
-                  id="regNo"
-                  type="text"
-                  value={regNo}
-                  onChange={(e: any) => setRegNo(e.target.value)}
-                  className="bg-slate-50"
-                  placeholder="ID or Email"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="pin">Access PIN</Label>
-                <Input
-                  id="pin"
-                  type="password"
-                  value={pin}
-                  onChange={(e: any) => setPin(e.target.value)}
-                  className="bg-slate-50"
-                  placeholder="•••••"
-                  required
-                />
-              </div>
-
-              {error && (
-                <div className="bg-red-50 text-red-600 text-xs p-3 rounded-lg flex items-center gap-2 border border-red-100">
-                  <Icons.ExclamationTriangle className="w-4 h-4 shrink-0" />
-                  {error}
+      <>
+        <SkipLink />
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-brand-50">
+          <Particles />
+          <main id="main-content" className="w-full max-w-md p-8 relative z-10 animate-in zoom-in duration-300">
+            <Card className="p-8 md:p-10 shadow-2xl border-t-4 border-brand-600 backdrop-blur-lg bg-white/95">
+              <div className="flex flex-col items-center mb-8">
+                <div className="mb-4 relative">
+                  <div className="absolute inset-0 bg-brand-200 rounded-full blur-lg opacity-50 animate-pulse" aria-hidden="true"></div>
+                  <Logo className="w-24 h-24 relative z-10" src={globalLogo} />
                 </div>
-              )}
+                <h1 className="text-2xl font-serif font-bold text-brand-900 text-center">IISBenin CBT</h1>
+                <p className="text-slate-500 text-sm mt-2 font-medium">Secure Assessment Portal</p>
+              </div>
 
-              <Button type="submit" className="w-full py-3 text-base font-bold shadow-lg shadow-brand-200/50 transition-transform active:scale-[0.98]" disabled={loginLoading}>
-                {loginLoading ? 'Authenticating...' : 'Sign In to Portal'}
-              </Button>
-            </form>
+              <form onSubmit={handleLogin} className="space-y-5">
+                <div>
+                  <Label htmlFor="regNo">Registration No / Staff Email</Label>
+                  <Input
+                    id="regNo"
+                    type="text"
+                    value={regNo}
+                    onChange={(e: any) => setRegNo(e.target.value)}
+                    className="bg-slate-50"
+                    placeholder="ID or Email"
+                    required
+                    autoComplete="username"
+                    aria-describedby="regNo-hint"
+                  />
+                  <p id="regNo-hint" className="sr-only">Enter your student registration number or staff email address</p>
+                </div>
+                <div>
+                  <Label htmlFor="pin">Access PIN</Label>
+                  <Input
+                    id="pin"
+                    type="password"
+                    value={pin}
+                    onChange={(e: any) => setPin(e.target.value)}
+                    className="bg-slate-50"
+                    placeholder="•••••"
+                    required
+                    autoComplete="current-password"
+                    aria-describedby="pin-hint"
+                  />
+                  <p id="pin-hint" className="sr-only">Enter your personal identification number</p>
+                </div>
 
-            <div className="mt-8 text-center">
-              <p className="text-xs text-slate-400">
-                Restricted Access &bull; Indian International School Benin
-              </p>
-            </div>
-          </Card>
+                {error && (
+                  <div role="alert" className="bg-red-50 text-red-600 text-xs p-3 rounded-lg flex items-center gap-2 border border-red-100">
+                    <Icons.ExclamationTriangle className="w-4 h-4 shrink-0" aria-hidden="true" />
+                    {error}
+                  </div>
+                )}
+
+                <Button type="submit" className="w-full py-3 text-base font-bold shadow-lg shadow-brand-200/50 transition-transform active:scale-[0.98]" disabled={loginLoading}>
+                  {loginLoading ? 'Authenticating...' : 'Sign In to Portal'}
+                </Button>
+              </form>
+
+              <div className="mt-8 text-center">
+                <p className="text-xs text-slate-400">
+                  Restricted Access &bull; Indian International School Benin
+                </p>
+              </div>
+            </Card>
+          </main>
         </div>
-      </div>
+      </>
     );
   }
 
   // 2. Admin Dashboard
   if (currentUser.role === UserRole.ADMIN) {
     return (
-      <AdminDashboard
+      <>
+        <SkipLink />
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <AdminDashboard
         onLogout={handleLogout}
         exams={exams}
         onUpdateExams={setExams}
@@ -263,7 +291,10 @@ const App: React.FC = () => {
   // 3. Teacher Dashboard
   if (currentUser.role === UserRole.TEACHER) {
     return (
-      <TeacherDashboard
+      <>
+        <SkipLink />
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <TeacherDashboard
         onLogout={handleLogout}
         teacherName={currentUser.name}
         teacherId={currentUser.id}
@@ -272,13 +303,16 @@ const App: React.FC = () => {
         results={results}
         globalLogo={globalLogo}
       />
+      </>
     );
   }
 
   // 4. Exam Session (Active)
   if (currentExam) {
     return (
-      <ExamSession
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <ExamSession
         exam={currentExam}
         student={currentUser}
         onSubmit={handleExamSubmit}
@@ -289,43 +323,51 @@ const App: React.FC = () => {
   // 5. Exam Result View
   if (examResult) {
     return (
-      <div className="min-h-screen bg-brand-50 flex items-center justify-center p-4 font-sans relative overflow-hidden">
-        <Particles />
-        <Card className="max-w-lg w-full p-8 text-center relative z-10 animate-in zoom-in duration-300 shadow-2xl border-t-4 border-brand-600">
-          <div className="w-20 h-20 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Icons.CheckCircle className="w-10 h-10 text-brand-600" />
-          </div>
-          <h2 className="text-3xl font-serif font-bold text-brand-900 mb-2">Submission Successful</h2>
-          <p className="text-slate-500 mb-8">Your responses for <span className="font-bold text-brand-700">{examResult.subject}</span> have been recorded.</p>
+      <>
+        <ToastContainer toasts={toasts} onRemove={removeToast} />
+        <div className="min-h-screen bg-brand-50 flex items-center justify-center p-4 font-sans relative overflow-hidden">
+          <Particles />
+          <main id="main-content" className="max-w-lg w-full relative z-10">
+            <Card className="p-8 text-center animate-in zoom-in duration-300 shadow-2xl border-t-4 border-brand-600">
+              <div className="w-20 h-20 bg-brand-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Icons.CheckCircle className="w-10 h-10 text-brand-600" aria-hidden="true" />
+              </div>
+              <h2 className="text-3xl font-serif font-bold text-brand-900 mb-2">Submission Successful</h2>
+              <p className="text-slate-500 mb-8">Your responses for <span className="font-bold text-brand-700">{examResult.subject}</span> have been recorded.</p>
 
-          <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100">
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Your Performance</p>
-            <div className="flex items-baseline justify-center gap-2">
-              <span className="text-5xl font-black text-brand-900">{examResult.score}</span>
-              <span className="text-xl text-slate-400 font-medium">/ {examResult.total}</span>
-            </div>
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-1 bg-white border border-slate-200 rounded-full shadow-sm">
-              <span className="text-xs font-bold text-slate-500 uppercase">Grade Achieved:</span>
-              <span className={`text-lg font-bold ${examResult.grade.startsWith('A') ? 'text-green-600' : 'text-brand-600'}`}>{examResult.grade}</span>
-            </div>
-          </div>
+              <div className="bg-slate-50 rounded-2xl p-6 mb-8 border border-slate-100" role="region" aria-label="Exam results">
+                <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-2">Your Performance</p>
+                <div className="flex items-baseline justify-center gap-2">
+                  <span className="text-5xl font-black text-brand-900">{examResult.score}</span>
+                  <span className="text-xl text-slate-400 font-medium">/ {examResult.total}</span>
+                </div>
+                <div className="mt-4 inline-flex items-center gap-2 px-4 py-1 bg-white border border-slate-200 rounded-full shadow-sm">
+                  <span className="text-xs font-bold text-slate-500 uppercase">Grade Achieved:</span>
+                  <span className={`text-lg font-bold ${examResult.grade.startsWith('A') ? 'text-green-600' : 'text-brand-600'}`}>{examResult.grade}</span>
+                </div>
+              </div>
 
-          <div className="mb-8 text-left bg-blue-50 p-4 rounded-xl border border-blue-100">
-            <p className="text-xs font-bold text-blue-400 uppercase mb-1">AI Feedback</p>
-            <p className="text-sm text-blue-800 italic">"{examResult.feedback}"</p>
-          </div>
+              <div className="mb-8 text-left bg-blue-50 p-4 rounded-xl border border-blue-100" role="region" aria-label="AI feedback">
+                <p className="text-xs font-bold text-blue-400 uppercase mb-1">AI Feedback</p>
+                <p className="text-sm text-blue-800 italic">"{examResult.feedback}"</p>
+              </div>
 
-          <Button onClick={() => setExamResult(null)} className="w-full py-3">
-            Return to Dashboard
-          </Button>
-        </Card>
-      </div>
+              <Button onClick={() => setExamResult(null)} className="w-full py-3">
+                Return to Dashboard
+              </Button>
+            </Card>
+          </main>
+        </div>
+      </>
     );
   }
 
   // 6. Student Dashboard (Default)
   return (
-    <StudentDashboard
+    <>
+      <SkipLink />
+      <ToastContainer toasts={toasts} onRemove={removeToast} />
+      <StudentDashboard
       student={currentUser}
       exams={exams}
       results={results.filter(r => r.student_id === currentUser.id)}
@@ -334,6 +376,7 @@ const App: React.FC = () => {
       onLogout={handleLogout}
       globalLogo={globalLogo}
     />
+    </>
   );
 };
 
