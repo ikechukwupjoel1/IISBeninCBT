@@ -31,7 +31,7 @@ const App: React.FC = () => {
 
   // Session State
   const [currentExam, setCurrentExam] = useState<Exam | null>(null);
-  const [examResult, setExamResult] = useState<{ score: number, total: number, feedback: string, grade: string, subject: string } | null>(null);
+  const [examResult, setExamResult] = useState<{ score: number, total: number, feedback: string, grade: string, subject: string, questions?: any[], answers?: Record<string, any> } | null>(null);
 
   // Login Form State
   const [regNo, setRegNo] = useState('');
@@ -246,7 +246,9 @@ const App: React.FC = () => {
         total,
         feedback,
         grade,
-        subject: currentExam.subject
+        subject: currentExam.subject,
+        questions: currentExam.questions,
+        answers
       });
 
       // Clear current exam
@@ -442,10 +444,52 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mb-8 text-left bg-blue-50 p-4 rounded-xl border border-blue-100" role="region" aria-label="AI feedback">
+              <div className="mb-6 text-left bg-blue-50 p-4 rounded-xl border border-blue-100" role="region" aria-label="AI feedback">
                 <p className="text-xs font-bold text-blue-400 uppercase mb-1">AI Feedback</p>
                 <p className="text-sm text-blue-800 italic">"{examResult.feedback}"</p>
               </div>
+
+              {examResult.questions && examResult.answers && (
+                <div className="mb-6 text-left max-h-96 overflow-y-auto">
+                  <p className="text-sm font-bold text-slate-600 uppercase mb-3 sticky top-0 bg-white py-2">Answer Review</p>
+                  {examResult.questions.map((q, idx) => {
+                    const userAnswer = examResult.answers![q.id];
+                    const isCorrect = userAnswer === q.correctAnswer;
+                    return (
+                      <div key={q.id} className={`mb-4 p-4 rounded-lg border-2 ${isCorrect ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
+                        <div className="flex items-start gap-3">
+                          <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${isCorrect ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+                            {idx + 1}
+                          </span>
+                          <div className="flex-1">
+                            <p className="text-sm font-medium text-slate-800 mb-2">{q.text}</p>
+                            <div className="space-y-1 text-xs">
+                              <p className={`${isCorrect ? 'text-green-700' : 'text-red-700'}`}>
+                                <span className="font-bold">Your answer:</span> {userAnswer?.toString() || 'Not answered'}
+                              </p>
+                              {!isCorrect && (
+                                <p className="text-green-700">
+                                  <span className="font-bold">Correct answer:</span> {q.correctAnswer?.toString()}
+                                </p>
+                              )}
+                              {q.explanation && (
+                                <p className="text-slate-600 mt-2 italic">
+                                  💡 {q.explanation}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          {isCorrect ? (
+                            <Icons.CheckCircle className="w-5 h-5 text-green-500 shrink-0" aria-label="Correct" />
+                          ) : (
+                            <Icons.ExclamationTriangle className="w-5 h-5 text-red-500 shrink-0" aria-label="Incorrect" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
 
               <Button onClick={() => setExamResult(null)} className="w-full py-3">
                 Return to Dashboard
