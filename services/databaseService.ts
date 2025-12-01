@@ -163,7 +163,32 @@ export const databaseService = {
 
             if (questionsError) throw questionsError;
 
-            return { data: { ...exam, questions }, error: null };
+            // Parse options from JSON string and normalize field names
+            const normalizedQuestions = questions?.map(q => ({
+                id: q.id,
+                text: q.text,
+                type: q.type,
+                options: q.options ? (typeof q.options === 'string' ? JSON.parse(q.options) : q.options) : undefined,
+                correctAnswer: q.correct_answer,
+                points: q.points || 1,
+                explanation: q.explanation
+            })) || [];
+
+            // Normalize exam field names from snake_case to camelCase
+            const normalizedExam = {
+                id: exam.id,
+                title: exam.title,
+                subject: exam.subject,
+                durationMinutes: exam.duration_minutes,
+                totalQuestions: exam.total_questions,
+                status: exam.status,
+                assignedClass: exam.assigned_class,
+                date: exam.exam_date,
+                time: exam.exam_time,
+                questions: normalizedQuestions
+            };
+
+            return { data: normalizedExam, error: null };
         } catch (error: any) {
             console.error('Get exam by ID error:', error);
             return { data: null, error: error.message };
