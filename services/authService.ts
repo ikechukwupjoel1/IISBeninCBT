@@ -63,6 +63,12 @@ export const authService = {
 
             // Get user profile
             const profile = await this.getUserProfile(data.user.id);
+            
+            if (!profile) {
+                console.error('Auth successful but no user profile found for ID:', data.user.id);
+                throw new Error('Account exists but profile not set up. Please contact administrator.');
+            }
+            
             return { user: profile, error: null };
         } catch (error: any) {
             console.error('Sign in error:', error);
