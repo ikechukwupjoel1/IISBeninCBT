@@ -47,21 +47,31 @@ GRANT EXECUTE ON FUNCTION verify_student_login(TEXT, TEXT) TO anon;
 GRANT EXECUTE ON FUNCTION verify_student_login(TEXT, TEXT) TO authenticated;
 
 -- Step 5: Ensure demo student exists with correct data
-INSERT INTO users (id, name, reg_number, pin, role, grade, avatar) 
-VALUES (
-  'demo-student-001',
-  'John Doe',
-  'IIS-2024-001',
-  '12345',
-  'STUDENT',
-  'Grade 12',
-  'https://ui-avatars.com/api/?name=John+Doe&background=4a7cbd&color=fff'
-) ON CONFLICT (id) DO UPDATE 
-SET 
-  pin = '12345', 
-  reg_number = 'IIS-2024-001',
-  role = 'STUDENT',
-  name = 'John Doe';
+-- First, check if student already exists
+DO $$
+BEGIN
+  -- Try to update existing student
+  UPDATE users 
+  SET pin = '12345', 
+      reg_number = 'IIS-2024-001',
+      role = 'STUDENT',
+      name = 'John Doe',
+      grade = 'Grade 12'
+  WHERE reg_number = 'IIS-2024-001';
+  
+  -- If no rows updated, insert new student with generated UUID
+  IF NOT FOUND THEN
+    INSERT INTO users (name, reg_number, pin, role, grade, avatar) 
+    VALUES (
+      'John Doe',
+      'IIS-2024-001',
+      '12345',
+      'STUDENT',
+      'Grade 12',
+      'https://ui-avatars.com/api/?name=John+Doe&background=4a7cbd&color=fff'
+    );
+  END IF;
+END $$;
 
 -- Step 6: Test the function (should return 1 row with student data)
 SELECT * FROM verify_student_login('IIS-2024-001', '12345');
