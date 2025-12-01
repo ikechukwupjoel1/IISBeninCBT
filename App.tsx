@@ -282,7 +282,6 @@ const App: React.FC = () => {
         exam={currentExam}
         student={currentUser}
         onSubmit={handleExamSubmit}
-        submitting={loginLoading}
       />
     );
   }
