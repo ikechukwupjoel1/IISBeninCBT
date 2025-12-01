@@ -1,5 +1,5 @@
 
-import { Exam, ExamStatus, QuestionType, User, UserRole } from "../types";
+import { Exam, ExamStatus, ExamType, QuestionType, User, UserRole } from "../types";
 
 export const MOCK_USERS: User[] = [
   {
@@ -82,47 +82,62 @@ export const MOCK_EXAMS: Exam[] = [
     durationMinutes: 15,
     totalQuestions: 5,
     status: ExamStatus.ACTIVE,
+    type: ExamType.EXAM,
+    allowedIps: [], // Empty means no restriction for now
     assignedClass: 'Grade 12',
     date: '2024-05-20',
     time: '09:00',
     questions: [
       {
         id: 'q1',
-        text: 'Solve for x: 2x + 5 = 15',
+        text: 'What is the value of Pi (approximate)?',
         type: QuestionType.MULTIPLE_CHOICE,
-        options: ['5', '10', '7.5', '2.5'],
-        correctAnswer: '5',
+        options: ['3.14', '3.14159', '3.1415', '3.1416'],
+        correctAnswer: '3.14',
         points: 2
       },
       {
         id: 'q2',
-        text: 'What is the square root of 144?',
-        type: QuestionType.MULTIPLE_CHOICE,
-        options: ['10', '11', '12', '13'],
-        correctAnswer: '12',
-        points: 2
+        text: 'Select all prime numbers from the list below:',
+        type: QuestionType.MULTI_SELECT,
+        options: ['2', '4', '11', '15', '19', '21'],
+        correctAnswer: ['2', '11', '19'],
+        points: 3
       },
       {
         id: 'q3',
-        text: 'A triangle has three sides.',
-        type: QuestionType.TRUE_FALSE,
-        correctAnswer: true,
-        points: 1
+        text: 'Match the capital cities to their countries:',
+        type: QuestionType.MATCHING,
+        matchingPairs: [
+          { left: 'France', right: 'Paris' },
+          { left: 'Japan', right: 'Tokyo' },
+          { left: 'Egypt', right: 'Cairo' }
+        ],
+        correctAnswer: 'Paris,Tokyo,Cairo', // Simplified for internal checking or unused for Matching if logic differs
+        points: 4
       },
       {
         id: 'q4',
-        text: 'Calculate the area of a rectangle with length 5cm and width 3cm.',
+        text: 'Identify this shape:',
+        imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Rectangle_example.svg/1280px-Rectangle_example.svg.png',
         type: QuestionType.MULTIPLE_CHOICE,
-        options: ['15cm²', '8cm²', '10cm²', '25cm²'],
-        correctAnswer: '15cm²',
+        options: ['Square', 'Rectangle', 'Trapezoid', 'Rhombus'],
+        correctAnswer: 'Rectangle',
         points: 2
       },
       {
         id: 'q5',
-        text: 'Pi is an integer.',
-        type: QuestionType.TRUE_FALSE,
-        correctAnswer: false,
-        points: 1
+        text: 'Which of these is a mammal?',
+        type: QuestionType.MULTIPLE_CHOICE,
+        options: ['Shark', 'Eagle', 'Dolphin', 'Frog'],
+        optionImages: [
+          'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/White_shark.jpg/640px-White_shark.jpg',
+          'https://upload.wikimedia.org/wikipedia/commons/thumb/1/19/%C3%81guila_real_volando.jpg/640px-%C3%81guila_real_volando.jpg',
+          'https://upload.wikimedia.org/wikipedia/commons/thumb/1/10/Tursiops_truncatus_01.jpg/640px-Tursiops_truncatus_01.jpg',
+          'https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Tree_frog2.jpg/640px-Tree_frog2.jpg'
+        ],
+        correctAnswer: 'Dolphin',
+        points: 2
       }
     ]
   },
@@ -133,6 +148,7 @@ export const MOCK_EXAMS: Exam[] = [
     durationMinutes: 30,
     totalQuestions: 0, // Placeholder
     status: ExamStatus.SCHEDULED,
+    type: ExamType.PRACTICE,
     assignedClass: 'Grade 11',
     date: '2024-06-15',
     time: '11:30',

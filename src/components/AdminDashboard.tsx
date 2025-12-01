@@ -5,7 +5,7 @@ import { MOCK_STATS } from '../utils/mockData';
 import { Button, Card, Input, Badge, Label } from './ui/UI';
 import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
-import { Exam, ExamStatus, User, UserRole, InvigilatorAssignment } from '../types';
+import { Exam, ExamStatus, User, UserRole, InvigilatorAssignment, ExamType } from '../types';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -51,6 +51,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
     assignedClass: '',
     duration: 30,
     status: 'SCHEDULED',
+    type: 'EXAM',
     date: '',
     time: ''
   });
@@ -88,6 +89,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       assignedClass: exam.assignedClass,
       duration: exam.durationMinutes,
       status: exam.status,
+      type: exam.type || ExamType.EXAM,
       date: exam.date || '',
       time: exam.time || ''
     });
@@ -96,7 +98,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleAddNewClick = () => {
     setEditingExam(null);
-    setFormData({ title: '', subject: '', assignedClass: '', duration: 30, status: 'SCHEDULED', date: '', time: '' });
+    setFormData({ title: '', subject: '', assignedClass: '', duration: 30, status: 'SCHEDULED', type: 'EXAM', date: '', time: '' });
     setShowScheduleModal(true);
   };
 
@@ -110,6 +112,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         assignedClass: formData.assignedClass,
         durationMinutes: formData.duration,
         status: formData.status as ExamStatus,
+        type: formData.type as ExamType,
         date: formData.date,
         time: formData.time
       } : e));
@@ -122,6 +125,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
         assignedClass: formData.assignedClass,
         durationMinutes: formData.duration,
         status: formData.status as ExamStatus,
+        type: formData.type as ExamType,
         totalQuestions: 0,
         questions: [],
         date: formData.date,
@@ -782,6 +786,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <option value="SCHEDULED">Scheduled</option>
                   <option value="ACTIVE">Active (Live)</option>
                   <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+              <div>
+                <Label>Exam Type</Label>
+                <select
+                  className="w-full rounded-lg border-slate-300 bg-white text-slate-900 sm:text-sm py-3 px-4 border"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                >
+                  <option value="EXAM">Official Exam (Strict)</option>
+                  <option value="PRACTICE">Practice Test (Open)</option>
                 </select>
               </div>
             </div>

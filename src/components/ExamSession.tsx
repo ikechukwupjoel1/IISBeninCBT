@@ -3,6 +3,7 @@ import { Exam, QuestionType } from '../types';
 import { Button, Card, Badge } from './ui/UI';
 import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
+import { useToast } from '../context/ToastContext';
 
 interface ExamSessionProps {
   exam: Exam;
@@ -45,6 +46,30 @@ const ExamSession: React.FC<ExamSessionProps> = ({ exam, student, onSubmit, subm
   const handleFinishExam = useCallback(() => {
     onSubmit(answers);
   }, [answers, onSubmit]);
+
+  // Proctoring: Tab Switch Detection
+  const [warnings, setWarnings] = useState(0);
+  const MAX_WARNINGS = 3;
+  const { showToast } = useToast();
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        const newWarnings = warnings + 1;
+        setWarnings(newWarnings);
+
+        if (newWarnings >= MAX_WARNINGS) {
+          showToast('Maximum warnings exceeded. Submitting exam automatically.', 'error');
+          handleFinishExam();
+        } else {
+          showToast(`Warning ${newWarnings}/${MAX_WARNINGS}: Please do not leave the exam page!`, 'warning');
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [warnings, showToast, handleFinishExam]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);

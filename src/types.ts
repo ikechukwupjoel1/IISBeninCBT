@@ -8,7 +8,9 @@ export enum UserRole {
 export enum QuestionType {
   MULTIPLE_CHOICE = 'MULTIPLE_CHOICE',
   TRUE_FALSE = 'TRUE_FALSE',
-  FILL_BLANK = 'FILL_BLANK'
+  FILL_IN_THE_BLANK = 'FILL_IN_THE_BLANK',
+  MULTI_SELECT = 'MULTI_SELECT',
+  MATCHING = 'MATCHING'
 }
 
 export enum ExamStatus {
@@ -36,9 +38,17 @@ export interface Question {
   text: string;
   type: QuestionType;
   options?: string[]; // For MCQ
-  correctAnswer: string | boolean;
+  correctAnswer: string | boolean | string[];
   points: number;
   explanation?: string;
+  imageUrl?: string;
+  optionImages?: string[];
+  matchingPairs?: { left: string; right: string }[];
+}
+
+export enum ExamType {
+  EXAM = 'EXAM',
+  PRACTICE = 'PRACTICE'
 }
 
 export interface Exam {
@@ -49,6 +59,8 @@ export interface Exam {
   totalQuestions: number;
   questions: Question[];
   status: ExamStatus;
+  type: ExamType; // New field
+  allowedIps?: string[]; // New field
   startTime?: Date;
   endTime?: Date;
   assignedClass: string;

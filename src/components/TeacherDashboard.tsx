@@ -6,6 +6,8 @@ import { Logo } from './ui/Logo';
 import { generateQuestions } from '../services/geminiService';
 import { databaseService } from '../services/databaseService';
 import { Question, Exam, ExamStatus, QuestionType } from '../types';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { MOCK_STATS } from '../utils/mockData';
 
 interface TeacherDashboardProps {
     onLogout: () => void;
@@ -23,7 +25,7 @@ const SCHOOL_CLASSES = [
 ];
 
 const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherName, teacherId, exams, onRefreshData, results, globalLogo }) => {
-    const [activeTab, setActiveTab] = useState<'create' | 'bank' | 'results'>('create');
+    const [activeTab, setActiveTab] = useState<'create' | 'bank' | 'results' | 'analytics'>('create');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
     const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
@@ -42,6 +44,18 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
     const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
     const [editForm, setEditForm] = useState({ text: '', correctAnswer: '', options: ['', '', '', ''] });
 
+    // Manual Question State
+    const [newQuestion, setNewQuestion] = useState<Partial<Question>>({
+        text: '',
+        type: QuestionType.MULTIPLE_CHOICE,
+        options: ['', '', '', ''],
+        correctAnswer: '',
+        points: 1,
+        imageUrl: '',
+        optionImages: ['', '', '', ''],
+        matchingPairs: [{ left: '', right: '' }, { left: '', right: '' }]
+    });
+
     const handleGenerateQuestions = async () => {
         if (!aiTopic) return;
         setIsGenerating(true);
@@ -56,27 +70,57 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
     };
 
     const handleBulkParse = () => {
-        // Simple parser: "Question | Option1,Option2,Option3,Option4 | CorrectAnswer"
-        const lines = bulkText.split('\n');
+        // Supports two formats:
+        // 1. Pipe: Question | Op1, Op2, Op3, Op4 | Correct
+        // 2. CSV: Question, Op1, Op2, Op3, Op4, Correct
+
+        const lines = bulkText.split('\n').filter(line => line.trim() !== '');
         const newQuestions: Question[] = [];
+        let successCount = 0;
+        let failCount = 0;
 
         lines.forEach((line, idx) => {
-            const parts = line.split('|');
-            if (parts.length >= 3) {
-                const text = parts[0].trim();
-                const options = parts[1].split(',').map(o => o.trim());
-                const correct = parts[2].trim();
+            let parts: string[] = [];
 
-                if (text && options.length > 0 && correct) {
+            // Detect format
+            if (line.includes('|')) {
+                // Pipe format
+                const segments = line.split('|');
+                if (segments.length >= 3) {
+                    const qText = segments[0].trim();
+                    const optionsPart = segments[1].split(',').map(o => o.trim());
+                    const correct = segments[2].trim();
+                    parts = [qText, ...optionsPart, correct];
+                }
+            } else {
+                // CSV format (simple split by comma, respecting quotes would be better but simple for now)
+                // For a robust CSV parser we'd need a library or complex regex, but let's try a simple split first
+                // assuming no commas in text for this simple version.
+                parts = line.split(',').map(p => p.trim());
+            }
+
+            // Validate parts
+            // We expect: Question + at least 2 options + Answer
+            if (parts.length >= 4) {
+                const text = parts[0];
+                const correctAnswer = parts[parts.length - 1];
+                const options = parts.slice(1, parts.length - 1);
+
+                if (text && options.length >= 2 && correctAnswer) {
                     newQuestions.push({
                         id: `bulk-${Date.now()}-${idx}`,
                         text,
                         type: QuestionType.MULTIPLE_CHOICE,
                         options,
-                        correctAnswer: correct,
+                        correctAnswer,
                         points: 2
                     });
+                    successCount++;
+                } else {
+                    failCount++;
                 }
+            } else {
+                failCount++;
             }
         });
 
@@ -84,9 +128,9 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
             setGeneratedQuestions(prev => [...prev, ...newQuestions]);
             setBulkText('');
             setShowBulkModal(false);
-            alert(`Successfully imported ${newQuestions.length} questions.`);
+            alert(`Successfully imported ${successCount} questions.${failCount > 0 ? ` Failed to parse ${failCount} lines.` : ''}`);
         } else {
-            alert("Could not parse questions. Use format: Question | Op1,Op2,Op3,Op4 | CorrectAnswer");
+            alert("Could not parse questions. Please check the format.\n\nCSV Example:\nQuestion, Option1, Option2, Option3, Option4, CorrectAnswer");
         }
     };
 
@@ -196,6 +240,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                     >
                         <Icons.Dashboard className="w-4 h-4" /> Past Results
                     </button>
+                    <button
+                        onClick={() => { setActiveTab('analytics'); setIsSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'analytics' ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                        <Icons.Sparkles className="w-4 h-4" /> Analytics
+                    </button>
                 </nav>
                 <div className="mt-auto p-4 border-t border-slate-100">
                     <div className="flex items-center gap-3 mb-4 px-2">
@@ -286,6 +336,218 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                                     <h3 className="font-bold text-slate-800 mb-2">Bulk Upload</h3>
                                     <p className="text-xs text-slate-500 mb-6 px-4">Import questions from CSV or formatted text (Pipe separated).</p>
                                     <Button variant="secondary" onClick={() => setShowBulkModal(true)}>Open Bulk Importer</Button>
+                                </div>
+                            </div>
+
+                            {/* Manual Entry Section */}
+                            <div className="mt-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                                <div className="flex items-center gap-2 mb-6 text-brand-800">
+                                    <Icons.Plus className="w-5 h-5" />
+                                    <h3 className="font-bold">Manual Entry</h3>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <Label>Question Type</Label>
+                                            <select
+                                                className="w-full rounded-lg border-slate-300 bg-white text-slate-900 sm:text-sm py-3 px-4 border"
+                                                value={newQuestion.type}
+                                                onChange={(e) => setNewQuestion({ ...newQuestion, type: e.target.value as QuestionType, correctAnswer: e.target.value === QuestionType.MULTI_SELECT ? [] : '' })}
+                                            >
+                                                <option value={QuestionType.MULTIPLE_CHOICE}>Multiple Choice (Single)</option>
+                                                <option value={QuestionType.MULTI_SELECT}>Multiple Choice (Multi-Select)</option>
+                                                <option value={QuestionType.TRUE_FALSE}>True / False</option>
+                                                <option value={QuestionType.MATCHING}>Matching Pairs</option>
+                                                <option value={QuestionType.FILL_IN_THE_BLANK}>Fill in the Blank</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <Label>Points</Label>
+                                            <Input
+                                                type="number"
+                                                value={newQuestion.points}
+                                                onChange={(e: any) => setNewQuestion({ ...newQuestion, points: parseInt(e.target.value) || 1 })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <Label>Question Text</Label>
+                                        <textarea
+                                            className="w-full rounded-lg border-slate-300 bg-white text-slate-900 sm:text-sm py-3 px-4 border"
+                                            rows={3}
+                                            value={newQuestion.text}
+                                            onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
+                                            placeholder="Enter the question here..."
+                                        />
+                                        <div className="mt-2">
+                                            <Label className="text-xs text-slate-500">Question Image URL (Optional)</Label>
+                                            <Input
+                                                placeholder="https://example.com/image.png"
+                                                value={newQuestion.imageUrl || ''}
+                                                onChange={(e: any) => setNewQuestion({ ...newQuestion, imageUrl: e.target.value })}
+                                                className="text-xs"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Options Logic */}
+                                    {(newQuestion.type === QuestionType.MULTIPLE_CHOICE || newQuestion.type === QuestionType.MULTI_SELECT) && (
+                                        <div className="space-y-3">
+                                            <Label>Answer Options</Label>
+                                            {newQuestion.options?.map((opt, idx) => (
+                                                <div key={idx} className="flex gap-2 items-start">
+                                                    <div className="flex-1 space-y-1">
+                                                        <Input
+                                                            placeholder={`Option ${idx + 1}`}
+                                                            value={opt}
+                                                            onChange={(e: any) => {
+                                                                const newOpts = [...(newQuestion.options || [])];
+                                                                newOpts[idx] = e.target.value;
+                                                                setNewQuestion({ ...newQuestion, options: newOpts });
+                                                            }}
+                                                        />
+                                                        <Input
+                                                            placeholder={`Image URL for Option ${idx + 1} (Optional)`}
+                                                            value={newQuestion.optionImages?.[idx] || ''}
+                                                            onChange={(e: any) => {
+                                                                const newImgs = [...(newQuestion.optionImages || ['', '', '', ''])];
+                                                                newImgs[idx] = e.target.value;
+                                                                setNewQuestion({ ...newQuestion, optionImages: newImgs });
+                                                            }}
+                                                            className="text-xs bg-slate-50"
+                                                        />
+                                                    </div>
+
+                                                    {newQuestion.type === QuestionType.MULTIPLE_CHOICE ? (
+                                                        <input
+                                                            type="radio"
+                                                            name="correctAnswer"
+                                                            className="mt-3 w-5 h-5 text-brand-600 focus:ring-brand-500"
+                                                            checked={newQuestion.correctAnswer === opt && opt !== ''}
+                                                            onChange={() => setNewQuestion({ ...newQuestion, correctAnswer: opt })}
+                                                        />
+                                                    ) : (
+                                                        <input
+                                                            type="checkbox"
+                                                            className="mt-3 w-5 h-5 text-brand-600 rounded focus:ring-brand-500"
+                                                            checked={Array.isArray(newQuestion.correctAnswer) && newQuestion.correctAnswer.includes(opt)}
+                                                            onChange={(e) => {
+                                                                let current = Array.isArray(newQuestion.correctAnswer) ? [...newQuestion.correctAnswer] : [];
+                                                                if (e.target.checked) {
+                                                                    current.push(opt);
+                                                                } else {
+                                                                    current = current.filter(c => c !== opt);
+                                                                }
+                                                                setNewQuestion({ ...newQuestion, correctAnswer: current });
+                                                            }}
+                                                        />
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {newQuestion.type === QuestionType.TRUE_FALSE && (
+                                        <div>
+                                            <Label>Correct Answer</Label>
+                                            <div className="flex gap-4 mt-2">
+                                                {['True', 'False'].map(opt => (
+                                                    <label key={opt} className="flex items-center gap-2 cursor-pointer">
+                                                        <input
+                                                            type="radio"
+                                                            name="correctAnswer"
+                                                            className="w-4 h-4 text-brand-600"
+                                                            checked={newQuestion.correctAnswer === opt}
+                                                            onChange={() => setNewQuestion({ ...newQuestion, correctAnswer: opt })}
+                                                        />
+                                                        <span className="text-sm font-medium">{opt}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {newQuestion.type === QuestionType.MATCHING && (
+                                        <div className="space-y-3">
+                                            <Label>Matching Pairs (Left - Right)</Label>
+                                            {newQuestion.matchingPairs?.map((pair, idx) => (
+                                                <div key={idx} className="flex gap-2">
+                                                    <Input
+                                                        placeholder="Left Item (e.g. Country)"
+                                                        value={pair.left}
+                                                        onChange={(e: any) => {
+                                                            const newPairs = [...(newQuestion.matchingPairs || [])];
+                                                            newPairs[idx].left = e.target.value;
+                                                            setNewQuestion({ ...newQuestion, matchingPairs: newPairs });
+                                                        }}
+                                                    />
+                                                    <Input
+                                                        placeholder="Right Item (e.g. Capital)"
+                                                        value={pair.right}
+                                                        onChange={(e: any) => {
+                                                            const newPairs = [...(newQuestion.matchingPairs || [])];
+                                                            newPairs[idx].right = e.target.value;
+                                                            setNewQuestion({ ...newQuestion, matchingPairs: newPairs });
+                                                        }}
+                                                    />
+                                                </div>
+                                            ))}
+                                            <Button
+                                                variant="secondary"
+                                                size="sm"
+                                                onClick={() => setNewQuestion({
+                                                    ...newQuestion,
+                                                    matchingPairs: [...(newQuestion.matchingPairs || []), { left: '', right: '' }]
+                                                })}
+                                            >
+                                                + Add Pair
+                                            </Button>
+                                        </div>
+                                    )}
+
+                                    {newQuestion.type === QuestionType.FILL_IN_THE_BLANK && (
+                                        <div>
+                                            <Label>Correct Answer</Label>
+                                            <Input
+                                                placeholder="Type the exact answer..."
+                                                value={newQuestion.correctAnswer as string}
+                                                onChange={(e: any) => setNewQuestion({ ...newQuestion, correctAnswer: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-end">
+                                        <Button
+                                            onClick={() => {
+                                                if (!newQuestion.text || !newQuestion.correctAnswer) {
+                                                    alert("Please fill in the question and correct answer.");
+                                                    return;
+                                                }
+                                                setGeneratedQuestions(prev => [...prev, {
+                                                    ...newQuestion,
+                                                    id: `manual-${Date.now()}`,
+                                                    type: newQuestion.type as QuestionType,
+                                                    options: newQuestion.options || [],
+                                                    correctAnswer: newQuestion.correctAnswer as any,
+                                                    points: newQuestion.points || 1
+                                                } as Question]);
+                                                setNewQuestion({
+                                                    text: '',
+                                                    type: QuestionType.MULTIPLE_CHOICE,
+                                                    options: ['', '', '', ''],
+                                                    correctAnswer: '',
+                                                    points: 1,
+                                                    imageUrl: '',
+                                                    optionImages: ['', '', '', ''],
+                                                    matchingPairs: [{ left: '', right: '' }, { left: '', right: '' }]
+                                                });
+                                            }}
+                                        >
+                                            Add Question
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -384,6 +646,67 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                         </Card>
                     </div>
                 )}
+
+                {activeTab === 'analytics' && (
+                    <div className="animate-in fade-in">
+                        <div className="flex items-center gap-3 mb-6">
+                            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden text-slate-500 hover:text-brand-900">
+                                <Icons.Menu className="w-6 h-6" />
+                            </button>
+                            <h1 className="text-2xl font-serif font-bold text-brand-900">Performance Analytics</h1>
+                        </div>
+
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <Card className="p-6">
+                                <h3 className="font-bold text-lg mb-4">Pass vs Fail Rates</h3>
+                                <div className="h-80 w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={MOCK_STATS}>
+                                            <CartesianGrid strokeDasharray="3 3" />
+                                            <XAxis dataKey="name" />
+                                            <YAxis />
+                                            <Tooltip />
+                                            <Legend />
+                                            <Bar dataKey="pass" fill="#10b981" name="Pass %" />
+                                            <Bar dataKey="fail" fill="#ef4444" name="Fail %" />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Card>
+
+                            <Card className="p-6">
+                                <h3 className="font-bold text-lg mb-4">Grade Distribution (Overall)</h3>
+                                <div className="h-80 w-full flex items-center justify-center">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={[
+                                                    { name: 'Grade A', value: 35 },
+                                                    { name: 'Grade B', value: 40 },
+                                                    { name: 'Grade C', value: 15 },
+                                                    { name: 'Fail', value: 10 },
+                                                ]}
+                                                cx="50%"
+                                                cy="50%"
+                                                innerRadius={60}
+                                                outerRadius={80}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                            >
+                                                <Cell fill="#10b981" />
+                                                <Cell fill="#3b82f6" />
+                                                <Cell fill="#f59e0b" />
+                                                <Cell fill="#ef4444" />
+                                            </Pie>
+                                            <Tooltip />
+                                            <Legend />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            </Card>
+                        </div>
+                    </div>
+                )}
             </main>
 
             {/* Bulk Import Modal */}
@@ -391,10 +714,13 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
                     <Card className="w-full max-w-2xl p-6 animate-in zoom-in duration-200">
                         <h3 className="font-bold text-lg mb-2">Bulk Import Questions</h3>
-                        <p className="text-sm text-slate-500 mb-4">Format: <span className="font-mono bg-slate-100 px-1 rounded">Question Text | Option1, Option2, Option3, Option4 | CorrectOption</span></p>
+                        <p className="text-sm text-slate-500 mb-4">
+                            Paste questions in <strong>CSV</strong> or <strong>Pipe</strong> format.<br />
+                            <code className="bg-slate-100 px-1 rounded text-xs">Question, Option1, Option2, Option3, Option4, CorrectAnswer</code>
+                        </p>
                         <textarea
                             className="w-full h-64 p-4 border border-slate-200 rounded-xl text-sm font-mono focus:ring-2 focus:ring-brand-500 outline-none"
-                            placeholder={`What is 2+2? | 3, 4, 5, 6 | 4\nCapital of France? | London, Berlin, Paris, Madrid | Paris`}
+                            placeholder={`What is 2+2?, 3, 4, 5, 6, 4\nCapital of France?, London, Berlin, Paris, Madrid, Paris`}
                             value={bulkText}
                             onChange={(e) => setBulkText(e.target.value)}
                         />
