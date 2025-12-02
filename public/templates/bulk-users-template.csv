@@ -1,0 +1,23 @@
+Name,Email,Role,Registration Number,PIN,Grade/Class,Phone
+John Doe,john.doe@example.com,STUDENT,STU001,1234,Grade 10A,+234-800-0001
+Jane Smith,jane.smith@example.com,STUDENT,STU002,5678,Grade 10A,+234-800-0002
+Michael Brown,michael.brown@example.com,TEACHER,TCH001,admin123,,+234-800-0003
+Sarah Johnson,sarah.johnson@example.com,STUDENT,STU003,9012,Grade 10B,+234-800-0004
+David Wilson,david.wilson@example.com,STUDENT,STU004,3456,Grade 10B,+234-800-0005
+
+# Instructions:
+# 1. Name: Full name of the user (required)
+# 2. Email: Valid email address (required for TEACHER and ADMIN, optional for STUDENT)
+# 3. Role: Must be one of: STUDENT, TEACHER, ADMIN (required)
+# 4. Registration Number: Unique identifier (required)
+# 5. PIN: Login PIN/password (required, min 4 characters)
+# 6. Grade/Class: Student's class (optional, only for STUDENT role)
+# 7. Phone: Contact number (optional)
+#
+# Notes:
+# - First row must be the header (do not modify)
+# - All fields are case-sensitive
+# - Email must be unique across all users
+# - Registration Number must be unique
+# - Lines starting with # are comments and will be ignored
+# - Empty lines will be skipped

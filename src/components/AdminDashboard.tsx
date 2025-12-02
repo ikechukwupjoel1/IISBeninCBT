@@ -7,6 +7,7 @@ import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
 import { databaseService } from '../services/databaseService';
 import { Exam, ExamStatus, User, UserRole, InvigilatorAssignment, ExamType } from '../types';
+import { BulkUserImport } from './BulkUserImport';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -44,7 +45,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   results,
   onUpdateResults
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invigilators' | 'users' | 'settings' | 'grading'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invigilators' | 'users' | 'settings' | 'grading' | 'bulk-import'>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Schedule Modal State
