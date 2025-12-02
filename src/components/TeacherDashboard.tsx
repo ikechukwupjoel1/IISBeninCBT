@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { Button, Card, Input, Label, Badge } from './ui/UI';
 import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
+import { ImageUpload } from './ui/ImageUpload';
 import { generateQuestions } from '../services/geminiService';
 import { databaseService } from '../services/databaseService';
 import { Question, Exam, ExamStatus, QuestionType } from '../types';
@@ -440,13 +441,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                                             onChange={(e) => setNewQuestion({ ...newQuestion, text: e.target.value })}
                                             placeholder="Enter the question here..."
                                         />
-                                        <div className="mt-2">
-                                            <Label className="text-xs text-slate-500">Question Image URL (Optional)</Label>
-                                            <Input
-                                                placeholder="https://example.com/image.png"
-                                                value={newQuestion.imageUrl || ''}
-                                                onChange={(e: any) => setNewQuestion({ ...newQuestion, imageUrl: e.target.value })}
-                                                className="text-xs"
+                                        <div className="mt-3">
+                                            <ImageUpload
+                                                label="Question Image (Optional)"
+                                                folder="questions"
+                                                currentImageUrl={newQuestion.imageUrl}
+                                                onUploadComplete={(url) => setNewQuestion({ ...newQuestion, imageUrl: url })}
                                             />
                                         </div>
                                     </div>
@@ -457,7 +457,7 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                                             <Label>Answer Options</Label>
                                             {newQuestion.options?.map((opt, idx) => (
                                                 <div key={idx} className="flex gap-2 items-start">
-                                                    <div className="flex-1 space-y-1">
+                                                    <div className="flex-1 space-y-2">
                                                         <Input
                                                             placeholder={`Option ${idx + 1}`}
                                                             value={opt}
@@ -467,15 +467,15 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                                                                 setNewQuestion({ ...newQuestion, options: newOpts });
                                                             }}
                                                         />
-                                                        <Input
-                                                            placeholder={`Image URL for Option ${idx + 1} (Optional)`}
-                                                            value={newQuestion.optionImages?.[idx] || ''}
-                                                            onChange={(e: any) => {
+                                                        <ImageUpload
+                                                            label={`Option ${idx + 1} Image (Optional)`}
+                                                            folder="options"
+                                                            currentImageUrl={newQuestion.optionImages?.[idx]}
+                                                            onUploadComplete={(url) => {
                                                                 const newImgs = [...(newQuestion.optionImages || ['', '', '', ''])];
-                                                                newImgs[idx] = e.target.value;
+                                                                newImgs[idx] = url;
                                                                 setNewQuestion({ ...newQuestion, optionImages: newImgs });
                                                             }}
-                                                            className="text-xs bg-slate-50"
                                                         />
                                                     </div>
 
