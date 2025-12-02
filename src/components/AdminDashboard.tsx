@@ -8,6 +8,7 @@ import { Logo } from './ui/Logo';
 import { databaseService } from '../services/databaseService';
 import { Exam, ExamStatus, User, UserRole, InvigilatorAssignment, ExamType } from '../types';
 import { BulkUserImport } from './BulkUserImport';
+import { AdminReports } from './AdminReports';
 
 interface AdminDashboardProps {
   onLogout: () => void;
@@ -45,7 +46,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
   results,
   onUpdateResults
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invigilators' | 'users' | 'settings' | 'grading' | 'bulk-import'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'schedule' | 'invigilators' | 'users' | 'settings' | 'grading' | 'bulk-import' | 'reports'>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Schedule Modal State
@@ -429,6 +430,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <Icons.Upload className="w-5 h-5" />
             Bulk Import
           </Button>
+          <Button
+            variant={activeTab === 'reports' ? 'primary' : 'ghost'}
+            className="w-full justify-start gap-3"
+            onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}
+          >
+            <Icons.Award className="w-5 h-5" />
+            Reports
+          </Button>
           <button
             onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'settings' ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-200' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -458,6 +467,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {activeTab === 'invigilators' && 'Staff & Invigilation'}
                 {activeTab === 'users' && 'User Management'}
                 {activeTab === 'bulk-import' && 'Bulk User Import'}
+                {activeTab === 'reports' && 'Reports & Analytics'}
                 {activeTab === 'settings' && 'System Settings'}
                 {activeTab === 'grading' && 'Grading Management'}
               </h2>
@@ -1061,6 +1071,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {activeTab === 'bulk-import' && (
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
           <BulkUserImport onComplete={() => onUpdateUsers(prev => [...prev])} />
+        </div>
+      )}
+
+      {/* Reports View */}
+      {activeTab === 'reports' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <AdminReports />
         </div>
       )}
 
