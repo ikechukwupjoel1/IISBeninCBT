@@ -4,6 +4,7 @@ import { Button, Card, Input, Label, Badge } from './ui/UI';
 import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
 import { ImageUpload } from './ui/ImageUpload';
+import { TeacherReports } from './TeacherReports';
 import { generateQuestions } from '../services/geminiService';
 import { databaseService } from '../services/databaseService';
 import { Question, Exam, ExamStatus, QuestionType } from '../types';
@@ -26,7 +27,7 @@ const SCHOOL_CLASSES = [
 ];
 
 const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherName, teacherId, exams, onRefreshData, results, globalLogo }) => {
-    const [activeTab, setActiveTab] = useState<'create' | 'bank' | 'results' | 'analytics'>('create');
+    const [activeTab, setActiveTab] = useState<'create' | 'bank' | 'results' | 'analytics' | 'reports'>('create');
     const [isGenerating, setIsGenerating] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
     const [generatedQuestions, setGeneratedQuestions] = useState<Question[]>([]);
@@ -305,6 +306,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                         className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'analytics' ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'}`}
                     >
                         <Icons.Sparkles className="w-4 h-4" /> Analytics
+                    </button>
+                    <button
+                        onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}
+                        className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg font-medium transition-colors ${activeTab === 'reports' ? 'bg-brand-50 text-brand-800' : 'text-slate-600 hover:bg-slate-50'}`}
+                    >
+                        <Icons.Award className="w-4 h-4" /> Reports
                     </button>
                 </nav>
                 <div className="mt-auto p-4 border-t border-slate-100">
@@ -764,6 +771,12 @@ const TeacherDashboard: React.FC<TeacherDashboardProps> = ({ onLogout, teacherNa
                                 </div>
                             </Card>
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'reports' && (
+                    <div className="animate-in fade-in">
+                        <TeacherReports teacherId={teacherId} />
                     </div>
                 )}
             </main>
