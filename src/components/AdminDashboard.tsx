@@ -421,6 +421,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
             User Management
           </Button>
+          <Button
+            variant={activeTab === 'bulk-import' ? 'primary' : 'ghost'}
+            className="w-full justify-start gap-3"
+            onClick={() => { setActiveTab('bulk-import'); setIsSidebarOpen(false); }}
+          >
+            <Icons.Upload className="w-5 h-5" />
+            Bulk Import
+          </Button>
           <button
             onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }}
             className={`w-full flex items-center gap-4 px-6 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${activeTab === 'settings' ? 'bg-brand-50 text-brand-900 ring-1 ring-brand-200' : 'text-slate-500 hover:bg-slate-50'}`}
@@ -449,7 +457,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 {activeTab === 'schedule' && 'Examination Schedule'}
                 {activeTab === 'invigilators' && 'Staff & Invigilation'}
                 {activeTab === 'users' && 'User Management'}
+                {activeTab === 'bulk-import' && 'Bulk User Import'}
                 {activeTab === 'settings' && 'System Settings'}
+                {activeTab === 'grading' && 'Grading Management'}
               </h2>
             </div>
             <p className="text-slate-500 mt-1 ml-9 md:ml-0">Manage the IISBenin testing environment.</p>
@@ -1044,6 +1054,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </table>
             </div>
           </Card>
+        </div>
+      )}
+
+      {/* Bulk Import View */}
+      {activeTab === 'bulk-import' && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <BulkUserImport onComplete={() => onUpdateUsers(prev => [...prev])} />
         </div>
       )}
 
