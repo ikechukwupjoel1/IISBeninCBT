@@ -4,6 +4,8 @@ import { Icons } from './ui/Icons';
 import { Logo } from './ui/Logo';
 import { Exam } from '../types';
 import { Particles } from './ui/Particles';
+import { StudentResultHistory } from './StudentResultHistory';
+import { StudentProfile } from './StudentProfile';
 
 interface StudentDashboardProps {
   student: any;
@@ -13,10 +15,11 @@ interface StudentDashboardProps {
   onStartExam: (exam: Exam) => void;
   onLogout: () => void;
   globalLogo: string;
+  onRefreshData: () => void;
 }
 
-const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, exams, results, completedExamIds, onStartExam, onLogout, globalLogo }) => {
-  const [view, setView] = useState<'exams' | 'results'>('exams');
+const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, exams, results, completedExamIds, onStartExam, onLogout, globalLogo, onRefreshData }) => {
+  const [view, setView] = useState<'exams' | 'results' | 'history' | 'profile'>('exams');
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans relative overflow-hidden">
@@ -55,7 +58,6 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, exams, res
               onClick={() => setView('exams')}
               role="tab"
               aria-selected={view === 'exams'}
-              aria-controls="exams-panel"
               className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${view === 'exams' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               Upcoming Exams
@@ -64,13 +66,40 @@ const StudentDashboard: React.FC<StudentDashboardProps> = ({ student, exams, res
               onClick={() => setView('results')}
               role="tab"
               aria-selected={view === 'results'}
-              aria-controls="results-panel"
               className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${view === 'results' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
             >
               My Grades
             </button>
+            <button
+              onClick={() => setView('history')}
+              role="tab"
+              aria-selected={view === 'history'}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${view === 'history' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              History
+            </button>
+            <button
+              onClick={() => setView('profile')}
+              role="tab"
+              aria-selected={view === 'profile'}
+              className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${view === 'profile' ? 'bg-brand-600 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+            >
+              Profile
+            </button>
           </div>
         </div>
+
+        {view === 'history' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <StudentResultHistory results={results} studentName={student.name} />
+          </div>
+        )}
+
+        {view === 'profile' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <StudentProfile student={student} onUpdate={onRefreshData} />
+          </div>
+        )}
 
         {view === 'exams' ? (
           <div id="exams-panel" role="tabpanel" aria-labelledby="exams-tab" className="animate-in fade-in slide-in-from-bottom-4 duration-500">
