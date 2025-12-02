@@ -17,8 +17,8 @@ export const StudentDashboardPage: React.FC = () => {
     const [globalLogo, setGlobalLogo] = useState<string>('');
 
     // React Query Hooks
-    const { data: exams = [], isLoading: examsLoading } = useExams('student', currentUser?.grade);
-    const { data: results = [], isLoading: resultsLoading } = useResults('student', currentUser?.id);
+    const { data: exams = [], isLoading: examsLoading, refetch: refetchExams } = useExams('student', currentUser?.grade);
+    const { data: results = [], isLoading: resultsLoading, refetch: refetchResults } = useResults('student', currentUser?.id);
 
     const isLoading = examsLoading || resultsLoading;
 
@@ -47,6 +47,11 @@ export const StudentDashboardPage: React.FC = () => {
         navigate('/login');
     };
 
+    const handleRefreshData = () => {
+        refetchExams();
+        refetchResults();
+    };
+
     if (!currentUser) return null;
     if (isLoading) return <DashboardSkeleton />;
 
@@ -61,6 +66,7 @@ export const StudentDashboardPage: React.FC = () => {
                 onStartExam={handleStartExam}
                 onLogout={handleLogout}
                 globalLogo={globalLogo}
+                onRefreshData={handleRefreshData}
             />
         </>
     );
